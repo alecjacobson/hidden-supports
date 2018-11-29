@@ -13,12 +13,9 @@ int main(int argc, char *argv[])
 	// read in stl file
 	Eigen::MatrixXf V;
 	Eigen::MatrixXi F;
-	Eigen::MatrixXf TC;
-	Eigen::MatrixXi FTC;
-	Eigen::MatrixXi FN;
 	Eigen::MatrixXf CN;
 	std::string filename = argc > 1 ? argv[1] : "../data/example-scene.stl";
-	//igl::readOBJ(filename, V, F); // TC, CN, F, FTC, FN);
+	//igl::readOBJ(filename, V, F);
 	igl::readSTL(filename, V, F, CN);
 
 	std::cout << "read frame" << std::endl;
@@ -30,7 +27,7 @@ int main(int argc, char *argv[])
 
 	// get view rays
 	Eigen::MatrixXf views;
-	generate_views(top_left, bottom_right, 10, views);
+	generate_views(top_left, bottom_right, 100, views);
 	std::cout << "generated viewing rays" << std::endl;
 	for (int i = 0; i < views.rows(); i++)
 		std::cout << i << ": " << views.row(i) << std::endl;

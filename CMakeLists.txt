@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.1)
-project(support-visibility)
+project(hidden-supports)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
@@ -14,5 +14,5 @@ find_package(LIBIGL REQUIRED QUIET)
 include_directories("include/")
 file(GLOB SRCFILES src/*.cpp)
 list(APPEND SRCFILES main.cpp)
-add_executable(${PROJECT_NAME}_bin ${SRCFILES})
-target_link_libraries(${PROJECT_NAME}_bin igl::core igl::opengl_glfw igl::opengl igl::embree)
+add_executable(${PROJECT_NAME} ${SRCFILES})
+target_link_libraries(${PROJECT_NAME} igl::core igl::opengl_glfw igl::opengl igl::embree)
