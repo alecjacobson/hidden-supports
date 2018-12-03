@@ -25,6 +25,6 @@ void compute_shadow_volume(
 	const Eigen::MatrixXi &F,
 	const Eigen::MatrixXf &GV,
 	const Eigen::MatrixXf &views,
-	Eigen::VectorXi &S);
+	Eigen::VectorXf &S);
 
 #endif

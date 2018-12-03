@@ -38,13 +38,13 @@ void compute_shadow_volume(
 	const Eigen::MatrixXi &F,
 	const Eigen::MatrixXf &GV,
 	const Eigen::MatrixXf &views,
-	Eigen::VectorXi &S)
+	Eigen::VectorXf &S)
 {
 	igl::embree::EmbreeIntersector intersector;
 	intersector.init(V, F);
 
 	S.resize(GV.rows());
-	S = Eigen::VectorXi::Ones(GV.rows());
+	S = Eigen::VectorXf::Zero(GV.rows());
 
 	for (int v = 0; v < views.rows(); v++)
 	{
@@ -53,8 +53,8 @@ void compute_shadow_volume(
 		bool was_hit;
 		igl::Hit hit;
 
-		Eigen::VectorXi S_i;
-		S_i.resize(GV.rows());
+		//Eigen::VectorXf S_i;
+		//S_i.resize(GV.rows());
 
 		for (int i = 0; i < GV.rows(); i++)
 		{
@@ -62,16 +62,18 @@ void compute_shadow_volume(
 			if (was_hit)
 			{
 				// fill voxel grid cell
-				S_i(i) = 1;
+				S(i) += 1;
 
 			}
 			else
 			{
-				S_i(i) = 0;
+				S(i) = 0;
 			}
 
 		}
-		S = S.array() * S_i.array();
+		//S = S.array() * S_i.array();
 	}
+
+	S = S / views.rows();
 	S = (S.array() == 0).select(S.array() + 1, -S); //.select(1, -1);
 }

@@ -21,13 +21,13 @@ int main(int argc, char *argv[])
 	std::cout << "read frame" << std::endl;
 
 	// compute "area light" of possible views
-	Eigen::Vector3f top_left(-9.0, 8.0, 5.0);
+	Eigen::Vector3f top_left(-7.0, 8.0, 5.0);
 	//Eigen::Vector3d bottom_right(-1.0, 2.0, 5.0);
-	Eigen::Vector3f bottom_right(-1.0, 5.0, 5.0);
+	Eigen::Vector3f bottom_right(-2.0, 5.0, 5.0);
 
 	// get view rays
 	Eigen::MatrixXf views;
-	generate_views(top_left, bottom_right, 100, views);
+	generate_views(top_left, bottom_right, 300, views);
 	std::cout << "generated viewing rays" << std::endl;
 	for (int i = 0; i < views.rows(); i++)
 		std::cout << i << ": " << views.row(i) << std::endl;
@@ -39,10 +39,12 @@ int main(int argc, char *argv[])
 	std::cout << "made voxel grid" << std::endl;
 
 	// compute shadow volume
-	Eigen::VectorXi S;
+	Eigen::VectorXf S;
 	//compute_shadow_volume(V, F, GV, top_left, S);
 	compute_shadow_volume(V, F, GV, views, S);
 	std::cout << "computed shadows" << std::endl;
+	for (int i = 0; i < S.rows(); i++)
+		std::cout << i << ": " << S.row(i) << std::endl;
 
 	Eigen::MatrixXf V_voxels;
 	Eigen::MatrixXi F_voxels;
