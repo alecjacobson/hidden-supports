@@ -10,8 +10,8 @@ void generate_views(
 	double mean_x = (top_left(0) + bottom_right(0)) / 2;
 	double mean_y = (top_left(1) + bottom_right(1)) / 2;
 
-	double std_dev_x = std::abs(top_left(0) - bottom_right(0)) / 4;
-	double std_dev_y = std::abs(top_left(1) - bottom_right(1)) / 4;
+	double std_dev_x = std::abs(top_left(0) - bottom_right(0)) / 8;
+	double std_dev_y = std::abs(top_left(1) - bottom_right(1)) / 8;
 
 	std::default_random_engine generator;
 	std::normal_distribution<double> distribution_x(mean_x, std_dev_x);
