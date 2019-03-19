@@ -15,4 +15,14 @@ void voxelize_scene(const Eigen::MatrixXf &V,
 	const Eigen::MatrixXi &F, 
 	Eigen::Vector3i &side,
 	Eigen::MatrixXf &GV);
+
+
+void make_voxels_from_visibility(
+	const Eigen::VectorXf &S, 
+	const Eigen::MatrixXf &GV,
+	const Eigen::Vector3i &side, 
+	const int isovalue, 
+	Eigen::MatrixXf &V_voxels, 
+	Eigen::MatrixXi &F_voxels);
+
 #endif

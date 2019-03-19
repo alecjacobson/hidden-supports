@@ -44,10 +44,11 @@ void compute_shadow_volume(
 	intersector.init(V, F);
 
 	S.resize(GV.rows());
-	S = Eigen::VectorXf::Ones(GV.rows());
+	S = Eigen::VectorXf::Zero(GV.rows());
 
 	for (int v = 0; v < views.rows(); v++)
 	{
+		std::cout << "view: " << v << std::endl;
 		const auto &view = views.row(v);
 		// intersect ray with boxed mesh
 		bool was_hit;
