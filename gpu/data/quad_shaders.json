@@ -1,0 +1,4 @@
+{
+  "vertex": [ "../src/3.1.1.debug_quad.vs"],
+  "fragment": [ "../src/3.1.1.debug_quad_depth.fs"]
+}

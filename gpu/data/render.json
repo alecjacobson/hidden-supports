@@ -1,0 +1,4 @@
+{
+  "vertex": [ "../src/shadow.vs"],
+  "fragment": [ "../src/shadow.fs"]
+}

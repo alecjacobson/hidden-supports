@@ -1,0 +1,4 @@
+{
+  "vertex": [ "../src/version410.glsl","../src/pass-through.vs"],
+  "fragment": [ "../src/version410.glsl","../src/pass-through.fs"]
+}

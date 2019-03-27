@@ -1,0 +1,4 @@
+{
+  "vertex": [ "../src/3.1.1.shadow_mapping_depth.vs"],
+  "fragment": [ "../src/3.1.1.shadow_mapping_depth.fs"]
+}
