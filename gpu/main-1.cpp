@@ -45,7 +45,7 @@
 // int t_h = 2*h;
 
 // int w=512,h=301;
-int w=100,h=100;
+int w=200,h=200;
 // int w = 70, h = 70;
 // int w = 30, h = 30;
 int t_w = w*2;
@@ -67,10 +67,6 @@ GLuint fbo_render,visible_slice;
 
 bool wire_frame = false;
 bool mouse_down = false;
-
-struct matrix_4 {
-  float* coeffs[9];
-};
 
 // Eigen::Matrix4f view = Eigen::Matrix4f::Identity();
 Eigen::Affine3f view = 
@@ -235,7 +231,7 @@ int main(int argc, char * argv[])
   // perspective(-light_right, light_right, -light_top, light_top, near, far, proj);
 
   // get view rays
-  float num_views = 100.0;
+  float num_views = 10.0;
   Eigen::Vector3f bottom_left = V.colwise().minCoeff();
 	Eigen::Vector3f top_right = V.colwise().maxCoeff();
 	Eigen::MatrixXf views;
@@ -782,7 +778,7 @@ glfwSetCursorPosCallback(
   glfwDestroyWindow(window);
   glfwTerminate();
 
-  /*
+  
   // transform back meshes
   Eigen::Vector3f m = V.colwise().maxCoeff();
   V *= scale_factor;
@@ -814,7 +810,7 @@ glfwSetCursorPosCallback(
 
   // viewer.data().set_points(views.cast <double>(), Eigen::RowVector3d(0.0,0.0,0.0));
   viewer.launch();
-  */
+  
 
   return EXIT_SUCCESS;
 
