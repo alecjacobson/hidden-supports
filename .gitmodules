@@ -4,3 +4,9 @@
 [submodule "TopOpt_in_PETSc"]
 	path = TopOpt_in_PETSc
 	url = https://github.com/topopt/TopOpt_in_PETSc
+[submodule "glfw"]
+	path = glfw
+	url = https://github.com/glfw/glfw.git
+[submodule "eigen-git-mirror"]
+	path = eigen-git-mirror
+	url = https://github.com/eigenteam/eigen-git-mirror
