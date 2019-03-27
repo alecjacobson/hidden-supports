@@ -10,3 +10,6 @@
 [submodule "eigen-git-mirror"]
 	path = eigen-git-mirror
 	url = https://github.com/eigenteam/eigen-git-mirror
+[submodule "connected-components-3d"]
+	path = connected-components-3d
+	url = https://github.com/seung-lab/connected-components-3d

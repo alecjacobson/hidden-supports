@@ -11,7 +11,7 @@ void voxelize_scene(const Eigen::MatrixXf &V,
 
 	//std::cout << V.colwise().minCoeff() << std::endl << V.colwise().maxCoeff() << std::endl;
 
-	igl::voxel_grid(box, 64, 1, GV, side);
+	igl::voxel_grid(box, 200, 1, GV, side);
 }
 
 
