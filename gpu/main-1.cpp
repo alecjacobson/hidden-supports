@@ -231,7 +231,7 @@ int main(int argc, char * argv[])
   // perspective(-light_right, light_right, -light_top, light_top, near, far, proj);
 
   // get view rays
-  float num_views = 10.0;
+  float num_views = 20.0;
   Eigen::Vector3f bottom_left = V.colwise().minCoeff();
 	Eigen::Vector3f top_right = V.colwise().maxCoeff();
 	Eigen::MatrixXf views;
@@ -751,6 +751,22 @@ glfwSetCursorPosCallback(
   Eigen::MatrixXi F_voxels_mc;
   std::cout << side << std::endl;
 
+  // transform back meshes
+  Eigen::Vector3f m = V.colwise().maxCoeff();
+  V *= scale_factor;
+  V.rowwise() += translation;
+
+  // std::cout << (V.colwise().maxCoeff()-V.colwise().minCoeff()).maxCoeff() << std::endl;
+  V_voxels *= scale_factor;
+  V_voxels.rowwise() += translation;
+
+  GV *= scale_factor;
+  GV.rowwise() += translation;
+
+  views *= scale_factor;
+  views.rowwise() += translation;
+  views.rowwise() += Eigen::RowVector3f(0,0,-translation(2)+scale_factor);
+
   double isovalue = 1.0;
   // voxelize
   make_voxels_from_visibility(S, GV, side, isovalue, V_voxels, F_voxels);
@@ -778,23 +794,7 @@ glfwSetCursorPosCallback(
   glfwDestroyWindow(window);
   glfwTerminate();
 
-  
-  // transform back meshes
-  Eigen::Vector3f m = V.colwise().maxCoeff();
-  V *= scale_factor;
-  V.rowwise() += translation;
-
-  // std::cout << (V.colwise().maxCoeff()-V.colwise().minCoeff()).maxCoeff() << std::endl;
-  V_voxels *= scale_factor;
-  V_voxels.rowwise() += translation;
-
-  GV *= scale_factor;
-  GV.rowwise() += translation;
-
-  views *= scale_factor;
-  views.rowwise() += translation;
-  views.rowwise() += Eigen::RowVector3f(0,0,-translation(2)+scale_factor);
-
+  /*
   // Create a libigl Viewer object
   igl::opengl::glfw::Viewer viewer;
   viewer.data().set_mesh(V_voxels.cast <double> (), F_voxels);
@@ -810,7 +810,7 @@ glfwSetCursorPosCallback(
 
   // viewer.data().set_points(views.cast <double>(), Eigen::RowVector3d(0.0,0.0,0.0));
   viewer.launch();
-  
+  */  
 
   return EXIT_SUCCESS;
 
