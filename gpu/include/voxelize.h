@@ -5,6 +5,15 @@
 #include <igl/voxel_grid.h>
 #include <igl/writeDMAT.h>
 
+// #include "cc3d.hpp"
+
+// // 3d array represented as 1d array
+// int* labels = new int[512*512*512](); 
+
+// int* cc_labels = cc3d::connected_components3d<int>(
+//   labels, /*sx=*/512, /*sy=*/512, /*sz=*/512
+// );
+
 // Compute the voxelization of a boxed scene.
 //
 // Inputs:

@@ -40,17 +40,12 @@
 
 
 // width, height, shader id, vertex array object
-// int w=576,h=576;
-// int t_w = 2*w;
-// int t_h = 2*h;
 
 // int w=512,h=301;
-int w=200,h=200;
-// int w = 70, h = 70;
-// int w = 30, h = 30;
-int t_w = w*2;
-int t_h = h*2;
-float ratio = (float)t_w / (float)t_h;
+int w=200,h=140;
+int d=200;
+int t_w,t_h;
+float ratio = 0.0;
 
 // max viewport size 16384
 // 16384^(1/1.5) ~= 645
@@ -214,15 +209,30 @@ int main(int argc, char * argv[])
   Eigen::Vector3i side;
   Eigen::Matrix<int,Eigen::Dynamic,3,Eigen::RowMajor>  F_int = F.cast <int> ();
   std::cout << "casted to int" << std::endl;
-  surround_scene_in_grid(w, V, F_int, side, GV);
+  surround_scene_in_grid(d, V, F_int, side, GV);
+  w = side(0);
+  h = side(1);
+  d = side(2);
+
+  t_w = w*2;
+  t_h = h*2;
+  ratio = (float)std::max(w,h) / (float)std::min(w,h);
+  // ratio = (float)w / (float)h;
   std::cout << "made voxel grid" << std::endl;
   std::cout << side << std::endl;
+  std::cout << ratio << std::endl;
 
   max_z = V.col(2).maxCoeff();
   min_z = V.col(2).minCoeff();
+  std::cout << max_z << std::endl << min_z << std::endl;
   z_range = std::abs(max_z - min_z);
   int number_of_slices = side(2);
   step = z_range / number_of_slices;
+
+  // glfwSetWindowShouldClose(window,true);
+  // window = glfwCreateWindow(w, h, "visibility", NULL, NULL);
+  // glfwSetWindowPos(window,0,0);
+  // glfwMakeContextCurrent(window);
 
   // Projection and modelview matrices
   perspective(-light_right, light_right, -light_top, light_top, near, far, light_proj);
@@ -231,7 +241,7 @@ int main(int argc, char * argv[])
   // perspective(-light_right, light_right, -light_top, light_top, near, far, proj);
 
   // get view rays
-  float num_views = 20.0;
+  float num_views = 5.0;
   Eigen::Vector3f bottom_left = V.colwise().minCoeff();
 	Eigen::Vector3f top_right = V.colwise().maxCoeff();
 	Eigen::MatrixXf views;
@@ -450,8 +460,8 @@ glfwSetCursorPosCallback(
   // {
   while(z_slice < max_z)
   {
-    std::cout << "COUNT: " << count << std::endl;
-    std::cout << "Z SLICE: " << z_slice << std::endl;
+    std::cout << "Z SLICE NUMBER: " << count << std::endl;
+    std::cout << "Z SLICE DEPTH: " << z_slice << std::endl;
     std::cout << "-----" << std::endl;
 
     igl::opengl::report_gl_error("start of loop\n");
@@ -757,9 +767,20 @@ glfwSetCursorPosCallback(
   std::cout << V_voxels.rows() << ", " << V_voxels.cols() << std::endl;
   std::cout << F_voxels.rows() << ", " << F_voxels.cols() << std::endl;
   // write obj
+  /////////
+  Eigen::Vector3f m = V.colwise().maxCoeff();
+  V *= scale_factor;
+  V.rowwise() += translation;
+
+  V_voxels *= scale_factor;
+  V_voxels.rowwise() += translation;
+
+  GV *= scale_factor;
+  GV.rowwise() += translation;
+  /////////////////
   igl::writeOBJ("output_voxels.obj", V_voxels, F_voxels);
   Eigen::VectorXf sum = V_voxels.rowwise().sum();
-  std::cout << (sum.array() == 0).count() << std::endl;
+  // std::cout << (sum.array() == 0).count() << std::endl;
 
   // voxelize sanity check
   // S = (S.array() != 0).select(-S, S);
