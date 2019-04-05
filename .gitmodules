@@ -13,3 +13,6 @@
 [submodule "connected-components-3d"]
 	path = connected-components-3d
 	url = https://github.com/seung-lab/connected-components-3d
+[submodule "GAUSS"]
+	path = GAUSS
+	url = https://github.com/dilevin/GAUSS
