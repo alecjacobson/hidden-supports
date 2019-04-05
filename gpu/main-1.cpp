@@ -14,6 +14,7 @@
 #include <igl/writeDMAT.h>
 #include <igl/get_seconds.h>
 #include <igl/copyleft/marching_cubes.h>
+#include <igl/remove_duplicate_vertices.h>
 #include <Eigen/Core>
 #include <igl/opengl/glfw/Viewer.h>
 #include <igl/centroid.h>
@@ -36,13 +37,9 @@
 #include "look_at.h"
 #include "voxelize.h"
 #include "generate_views.h"
-#include "writeBINVOX.h"
-
-
-// width, height, shader id, vertex array object
 
 // int w=512,h=301;
-int w=200,h=140;
+int w=156,h=200;
 int d=200;
 int t_w,t_h;
 float ratio = 0.0;
@@ -114,6 +111,8 @@ Eigen::Matrix<GLuint,Eigen::Dynamic,3,Eigen::RowMajor> Q_FN;
 
 int main(int argc, char * argv[])
 {
+  Eigen::setNbThreads(1);
+
   std::vector<std::string> vertex_shader_paths;
   std::vector<std::string> fragment_shader_paths;
   std::vector<std::string> q_vertex_shader_paths;
@@ -778,8 +777,14 @@ glfwSetCursorPosCallback(
   GV *= scale_factor;
   GV.rowwise() += translation;
   /////////////////
-  igl::writeOBJ("output_voxels.obj", V_voxels, F_voxels);
-  Eigen::VectorXf sum = V_voxels.rowwise().sum();
+  Eigen::MatrixXf NV;
+  Eigen::MatrixXi NF;
+  Eigen::MatrixXi IM;
+  Eigen::MatrixXi MI;
+  igl::remove_duplicate_vertices(V_voxels, F_voxels, 1e-7, NV, IM, MI, NF);
+
+  igl::writeOBJ("output_voxels.obj", NV, NF);
+  // Eigen::VectorXf sum = V_voxels.rowwise().sum();
   // std::cout << (sum.array() == 0).count() << std::endl;
 
   // voxelize sanity check
