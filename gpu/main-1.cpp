@@ -39,7 +39,7 @@
 #include "generate_views.h"
 
 // int w=512,h=301;
-int w=156,h=200;
+int w=200,h=139;
 int d=200;
 int t_w,t_h;
 float ratio = 0.0;
@@ -51,11 +51,10 @@ float ratio = 0.0;
 GLuint prog_id=0;
 GLuint q_prog_id=0;
 GLuint render_prog_id=0;
-GLuint VAO;
-GLuint Q_VAO;
-GLuint FBO;
-GLuint shadow_map;
-GLuint fbo_render,visible_slice;
+GLuint VAO,Q_VAO;
+GLuint FBO,FBO_render,FBO_large;
+GLuint shadow_map,visibility_map,large_visibility;
+// GLuint fbo_render,visible_slice;
 
 bool wire_frame = false;
 bool mouse_down = false;
@@ -240,7 +239,7 @@ int main(int argc, char * argv[])
   // perspective(-light_right, light_right, -light_top, light_top, near, far, proj);
 
   // get view rays
-  float num_views = 5.0;
+  float num_views = 2.0;
   Eigen::Vector3f bottom_left = V.colwise().minCoeff();
 	Eigen::Vector3f top_right = V.colwise().maxCoeff();
 	Eigen::MatrixXf views;
@@ -421,24 +420,33 @@ glfwSetCursorPosCallback(
     return false;
   };
 
-  init_shadow_buffer(shadow_map, FBO, q_prog_id, t_w, t_h);
+  init_shadow_buffer(shadow_map, FBO, q_prog_id, t_w, t_h, "depth");
   igl::opengl::report_gl_error("init shadow buffer\n");
 
-  // render buffer as color buffer
-  glGenFramebuffers(1,&fbo_render);
-  glGenRenderbuffers(1, &visible_slice);
+  init_shadow_buffer(visibility_map, FBO_render, render_prog_id, w, h, "color");
+  igl::opengl::report_gl_error("init shadow buffer\n");
 
-  glBindRenderbuffer(GL_RENDERBUFFER, visible_slice);
-  glRenderbufferStorage(GL_RENDERBUFFER, GL_RED, w, h);
-  glBindFramebuffer(GL_FRAMEBUFFER, fbo_render);
+  init_shadow_buffer(large_visibility, FBO_large, render_prog_id, w*num_views, h, "color");
+  igl::opengl::report_gl_error("init large shadow buffer\n");
+  std::cout << "SIZE " << w*num_views << " by " << h << std::endl;
+ 
+  // render buffer as color buffer
+  // glGenFramebuffers(1,&fbo_render);
+  // glBindFramebuffer(GL_FRAMEBUFFER, fbo_render);
+  // glGenFramebuffers(1,&fbo_render);
+  // glGenRenderbuffers(1, &visible_slice);
+
+  // glBindRenderbuffer(GL_RENDERBUFFER, visible_slice);
+  // glRenderbufferStorage(GL_RENDERBUFFER, GL_RED, w, h);
+  // glBindFramebuffer(GL_FRAMEBUFFER, fbo_render);
 
   // attach render buffer to the fbo as color buffer
-  glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, visible_slice);
-  bool status = glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE;
-  if(!status)
-      std::cout << "Could not initialise FBO" << std::endl;
-  else
-      std::cout << "color FBO ready!" << std::endl;
+  // glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, visible_slice);
+  // bool status = glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE;
+  // if(!status)
+  //     std::cout << "Could not initialise FBO" << std::endl;
+  // else
+  //     std::cout << "color FBO ready!" << std::endl;
 
   float start_time = igl::get_seconds();
 
@@ -448,7 +456,8 @@ glfwSetCursorPosCallback(
   //     -0.1*factor/float(w),
   //     Eigen::Vector3f(0,1,0)));
 
-  z_slice = min_z;
+  z_slice = min_z + (number_of_slices/2)*step - step;
+  max_z = min_z + (number_of_slices/2)*step;
   Eigen::Matrix< GLfloat,Eigen::Dynamic,Eigen::Dynamic,Eigen::RowMajor> visibility_values;
   visibility_values.resize(w*h*number_of_slices,1);
 
@@ -537,19 +546,8 @@ glfwSetCursorPosCallback(
         std::cout<<"-----------------------------------------------"<<std::endl;
       }
     }
-
-      // Draw mesh as wireframe
-      if(wire_frame)
-      {
-        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-      }
-      else
-      {
-        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-      }
-
-
       igl::opengl::report_gl_error("loaded shaders\n");
+
 
       for(int v = 0; v < views.rows(); v++)
       {
@@ -610,55 +608,19 @@ glfwSetCursorPosCallback(
           // draw elements to texture
           glDrawElements(GL_TRIANGLES, F.size(), GL_UNSIGNED_INT, 0);
           igl::opengl::report_gl_error("draw elements 1\n");
-          // uncomment the following line if you want to debug with JUST the quad
-          // glBindVertexArray(0);
 
-          Eigen::Matrix< GLubyte,Eigen::Dynamic,Eigen::Dynamic,Eigen::RowMajor> shadow;
-          shadow.resize(t_w*t_h,1);
+          // Eigen::Matrix< GLubyte,Eigen::Dynamic,Eigen::Dynamic,Eigen::RowMajor> shadow;
+          // shadow.resize(t_w*t_h,1);
 
-          glReadPixels(0, 0, t_w, t_h, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, shadow.data());
-          igl::writeDMAT("texture.dmat", shadow,true);
+          // glReadPixels(0, 0, t_w, t_h, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, shadow.data());
+          // igl::writeDMAT("texture"+std::to_string(v)+".dmat", shadow,true);
 
           glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
           igl::opengl::report_gl_error("unbind fbo 0\n");
 
           // glfwGetFramebufferSize(window, &::w, &::h);
           glViewport(0, 0, w, h);
           glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-          // glUseProgram(render_prog_id);
-          // GLint texture_loc = glGetUniformLocation(render_prog_id,"shadow_map");
-          // glUniform1i(texture_loc, 0);
-          // GLint near_loc = glGetUniformLocation(render_prog_id,"near_plane");
-          // glUniform1f(near_loc, near);
-          // GLint far_loc = glGetUniformLocation(render_prog_id,"far_plane");
-          // glUniform1f(far_loc, far);
-          // GLint render_proj_loc = glGetUniformLocation(render_prog_id,"proj");
-          // glUniformMatrix4fv(render_proj_loc,1,GL_FALSE,proj.data());
-          // GLint render_light_proj_loc = glGetUniformLocation(render_prog_id,"light_proj");
-          // glUniformMatrix4fv(render_light_proj_loc,1,GL_FALSE,light_proj.data());
-          // GLint render_model_loc = glGetUniformLocation(render_prog_id,"model");
-          // glUniformMatrix4fv(render_model_loc,1,GL_FALSE,model.data());
-          // GLint view_loc = glGetUniformLocation(render_prog_id,"view");
-          // glUniformMatrix4fv(view_loc,1,GL_FALSE,view.data());
-          // GLint render_light_view_loc = glGetUniformLocation(render_prog_id,"light_view");
-          // glUniformMatrix4fv(render_light_view_loc,1,GL_FALSE,light_view.data());
-
-          // bind_map_for_reading(shadow_map, GL_TEXTURE0);
-
-          // // draw scene from camera and use shadow map
-          // glDrawElements(GL_TRIANGLES, F.size(), GL_UNSIGNED_INT, 0);
-          // igl::opengl::report_gl_error("draw elements 2\n");
-
-          // Eigen::Matrix< GLfloat,Eigen::Dynamic,Eigen::Dynamic,Eigen::RowMajor> shadow_render;
-          // shadow_render.resize(w*h,1);
-          // igl::opengl::report_gl_error("resize eigen matrix\n");
-
-          // igl::opengl::report_gl_error("pack alignment\n");
-          // glReadPixels(0, 0, w, h, GL_RED, GL_FLOAT, shadow_render.data());
-          // igl::writeDMAT("shadow.dmat", shadow,true);
-          // igl::opengl::report_gl_error("read pixels\n");
 
           ///////////
           q_model << ratio, 0, 0, 0,
@@ -691,29 +653,32 @@ glfwSetCursorPosCallback(
           glUniformMatrix4fv(q_light_view_loc,1,GL_FALSE,light_view.data());
 
           mesh_to_vao(q_prog_id, Q_V, Q_F, Q_N, Q_TC,Q_VAO);
-      
-          // comment out the following line to debug ONSCREEN
-          glBindFramebuffer(GL_FRAMEBUFFER, fbo_render);
+
           igl::opengl::report_gl_error("bind frame buffer for color reading\n");
           bind_map_for_reading(shadow_map, GL_TEXTURE0);
+          bind_map_for_writing(FBO_render);
 
           glBindVertexArray(Q_VAO);
           
-          igl::opengl::report_gl_error("bind vao 2\n");
+          igl::opengl::report_gl_error("bind vao quad\n");
           glDrawElements(GL_TRIANGLES, Q_F.size(), GL_UNSIGNED_INT, 0);
           igl::opengl::report_gl_error("draw elements to offscreen buffer\n");
 
           Eigen::Matrix< GLfloat,Eigen::Dynamic,Eigen::Dynamic,Eigen::RowMajor> visibility_slice;
-          visibility_slice.resize(w*h,1);
-          igl::opengl::report_gl_error("resize eigen matrix\n");
-
-          igl::opengl::report_gl_error("pack alignment\n");
+                visibility_slice.resize(w*h,1);
           glReadPixels(0, 0, w, h, GL_RED, GL_FLOAT, visibility_slice.data());
-          igl::opengl::report_gl_error("read pixels\n");
-          
-          if(count < side(2))
-            visibility_values.block(count*w*h, 0,
-                                    w*h, 1) += visibility_slice;
+          igl::writeDMAT("slice"+std::to_string(v)+".dmat", visibility_slice, true);
+
+          bind_map_for_reading(visibility_map, GL_TEXTURE1);
+
+          GLint x_offset = w*v;
+          std::cout << x_offset << std::endl;
+          glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, x_offset, 0, w, h);
+          igl::opengl::report_gl_error("copy texture\n");
+
+          // if(count < side(2))
+          //   visibility_values.block(count*w*h, 0,
+          //                           w*h, 1) += visibility_slice;
 
           // igl::writeDMAT("output_slice_"+std::to_string(count)+".dmat", visibility_slice,true);
 
@@ -723,7 +688,7 @@ glfwSetCursorPosCallback(
 
           glFlush();
           glfwSwapBuffers(window);
-
+          igl::opengl::report_gl_error("flush\n");
 
           {
             glfwPollEvents();
@@ -735,18 +700,44 @@ glfwSetCursorPosCallback(
               std::this_thread::sleep_for(std::chrono::microseconds((int)(min_duration-duration)));
             }
           }
+          igl::opengl::report_gl_error("poll\n");
+         
       }
+
+      Eigen::Matrix< GLfloat,Eigen::Dynamic,Eigen::Dynamic,Eigen::RowMajor> visibility_slices;
+      visibility_slices.resize(num_views*w*h,1);
+
+      bind_map_for_reading(large_visibility,GL_TEXTURE2);
+      glReadPixels(0, 0, w*num_views, h, GL_RED, GL_FLOAT, visibility_slices.data());
+      igl::opengl::report_gl_error("read pixels\n");
+
+      igl::writeDMAT("slices.dmat", visibility_slices, true);
+
+
+      //if(count < side(2))
+      //   visibility_values.block(count*w*h, 0,
+      //                           w*h, 1) += visibility_slice;
+
+      // glFlush();
+      // glfwSwapBuffers(window);
+
+      // {
+      //   glfwPollEvents();
+      //   // In microseconds
+      //   double duration = 1000000.*(igl::get_seconds()-tic);
+      //   const double min_duration = 1000000./60.;
+      //   if(duration<min_duration)
+      //   {
+      //     std::this_thread::sleep_for(std::chrono::microseconds((int)(min_duration-duration)));
+      //   }
+      // }
+
       z_slice += step;
       count++;
       
     }
 
   std::cout << "size of vector: " << visibility_values.rows() << std::endl;
-  // Eigen::Matrix< float,Eigen::Dynamic,Eigen::Dynamic,Eigen::RowMajor> 
-  //   visibility_floats = visibility_values.cast <float> ();
-  // Eigen::VectorXf S(Eigen::Map<Eigen::VectorXf>(visibility_floats.data(), 
-  //         visibility_floats.cols()*visibility_floats.rows()));
-
   Eigen::VectorXf S(Eigen::Map<Eigen::VectorXf>(visibility_values.data(), 
           visibility_values.cols()*visibility_values.rows()));      
   // all invisible/geometry voxels have 1 or floats, visible voxels have 0
@@ -760,7 +751,7 @@ glfwSetCursorPosCallback(
   Eigen::MatrixXi F_voxels_mc;
   std::cout << side << std::endl;
 
-  double isovalue = 1.0;
+  double isovalue = 0.8;
   // voxelize
   make_voxels_from_visibility(S, GV, side, isovalue, V_voxels, F_voxels);
   std::cout << V_voxels.rows() << ", " << V_voxels.cols() << std::endl;
@@ -781,7 +772,7 @@ glfwSetCursorPosCallback(
   Eigen::MatrixXi NF;
   Eigen::MatrixXi IM;
   Eigen::MatrixXi MI;
-  igl::remove_duplicate_vertices(V_voxels, F_voxels, 1e-7, NV, IM, MI, NF);
+  igl::remove_duplicate_vertices(V_voxels, F_voxels, 1e-8, NV, IM, MI, NF);
 
   igl::writeOBJ("output_voxels.obj", NV, NF);
   // Eigen::VectorXf sum = V_voxels.rowwise().sum();
