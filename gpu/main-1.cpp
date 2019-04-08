@@ -239,7 +239,7 @@ int main(int argc, char * argv[])
   // perspective(-light_right, light_right, -light_top, light_top, near, far, proj);
 
   // get view rays
-  float num_views = 2.0;
+  float num_views = 10.0;
   Eigen::Vector3f bottom_left = V.colwise().minCoeff();
 	Eigen::Vector3f top_right = V.colwise().maxCoeff();
 	Eigen::MatrixXf views;
@@ -426,27 +426,33 @@ glfwSetCursorPosCallback(
   init_shadow_buffer(visibility_map, FBO_render, render_prog_id, w, h, "color");
   igl::opengl::report_gl_error("init shadow buffer\n");
 
-  init_shadow_buffer(large_visibility, FBO_large, render_prog_id, w*num_views, h, "color");
-  igl::opengl::report_gl_error("init large shadow buffer\n");
-  std::cout << "SIZE " << w*num_views << " by " << h << std::endl;
- 
-  // render buffer as color buffer
-  // glGenFramebuffers(1,&fbo_render);
-  // glBindFramebuffer(GL_FRAMEBUFFER, fbo_render);
-  // glGenFramebuffers(1,&fbo_render);
-  // glGenRenderbuffers(1, &visible_slice);
-
-  // glBindRenderbuffer(GL_RENDERBUFFER, visible_slice);
-  // glRenderbufferStorage(GL_RENDERBUFFER, GL_RED, w, h);
-  // glBindFramebuffer(GL_FRAMEBUFFER, fbo_render);
-
-  // attach render buffer to the fbo as color buffer
-  // glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER, visible_slice);
-  // bool status = glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE;
-  // if(!status)
-  //     std::cout << "Could not initialise FBO" << std::endl;
-  // else
-  //     std::cout << "color FBO ready!" << std::endl;
+  float fl_num_textures = h*num_views / t_dims[0];
+  int num_textures = std::ceil(fl_num_textures);
+  GLuint large_visibilities[num_textures];
+  // std::cout << num_textures << std::endl;
+  if(num_textures > 1)
+  {
+    for(int i = 0; i < num_textures; i++)
+    {
+      if(i == num_textures)
+      {
+        init_shadow_buffer(large_visibilities[i], FBO_large, render_prog_id, w, h*num_views, "none");
+        std::cout << "SIZE " << w << " by " << h*num_views << std::endl;
+      }
+      else
+      {
+        init_shadow_buffer(large_visibilities[i], FBO_large, render_prog_id, w, t_dims[0], "none");
+        std::cout << "SIZE " << w << " by " << t_dims[0] << std::endl;
+      }
+    }
+  }
+  else
+  {
+    init_shadow_buffer(large_visibilities[0], FBO_large, render_prog_id, w, h*num_views, "none");
+    igl::opengl::report_gl_error("init large shadow buffer\n");
+    std::cout << "SIZE " << w << " by " << h*num_views << std::endl;
+  }
+  
 
   float start_time = igl::get_seconds();
 
@@ -456,12 +462,12 @@ glfwSetCursorPosCallback(
   //     -0.1*factor/float(w),
   //     Eigen::Vector3f(0,1,0)));
 
-  z_slice = min_z + (number_of_slices/2)*step - step;
-  max_z = min_z + (number_of_slices/2)*step;
-  Eigen::Matrix< GLfloat,Eigen::Dynamic,Eigen::Dynamic,Eigen::RowMajor> visibility_values;
-  visibility_values.resize(w*h*number_of_slices,1);
+  z_slice = min_z;// + (number_of_slices/2)*step;
+  //max_z = z_slice + step;
 
   int count = 0;
+  Eigen::Matrix< GLfloat,Eigen::Dynamic,Eigen::Dynamic,Eigen::RowMajor> visibility_values;
+      visibility_values.resize(w*h*(number_of_slices+1),1);
 
   // Main display routine
   // while (!glfwWindowShouldClose(window))
@@ -548,7 +554,9 @@ glfwSetCursorPosCallback(
     }
       igl::opengl::report_gl_error("loaded shaders\n");
 
-
+      int which_texture = 0;
+      int tex_dims = t_dims[0];
+      GLint y_offset = 0;
       for(int v = 0; v < views.rows(); v++)
       {
           // std::cout << "view " << views.row(v) << std::endl; 
@@ -618,7 +626,6 @@ glfwSetCursorPosCallback(
           glBindFramebuffer(GL_FRAMEBUFFER, 0);
           igl::opengl::report_gl_error("unbind fbo 0\n");
 
-          // glfwGetFramebufferSize(window, &::w, &::h);
           glViewport(0, 0, w, h);
           glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -664,23 +671,31 @@ glfwSetCursorPosCallback(
           glDrawElements(GL_TRIANGLES, Q_F.size(), GL_UNSIGNED_INT, 0);
           igl::opengl::report_gl_error("draw elements to offscreen buffer\n");
 
-          Eigen::Matrix< GLfloat,Eigen::Dynamic,Eigen::Dynamic,Eigen::RowMajor> visibility_slice;
-                visibility_slice.resize(w*h,1);
-          glReadPixels(0, 0, w, h, GL_RED, GL_FLOAT, visibility_slice.data());
-          igl::writeDMAT("slice"+std::to_string(v)+".dmat", visibility_slice, true);
+          // Eigen::Matrix< GLfloat,Eigen::Dynamic,Eigen::Dynamic,Eigen::RowMajor> visibility_slice;
+          //       visibility_slice.resize(w*h,1);
+          // glReadPixels(0, 0, w, h, GL_RED, GL_FLOAT, visibility_slice.data());
+          // igl::writeDMAT("slice"+std::to_string(v)+".dmat", visibility_slice, true);
 
-          bind_map_for_reading(visibility_map, GL_TEXTURE1);
+          glFlush();
+          glfwSwapBuffers(window);
+                    
+          if (h*v > tex_dims || (y_offset+h) > t_dims[0])
+          { 
+            which_texture++; 
+            tex_dims = t_dims[0] * (which_texture+1);
+            y_offset = 0;
+          }
+          
+          // std::cout << "WHICH TEXTURE? " << which_texture << std::endl;
+          // std::cout << v*h << " " << tex_dims << std::endl;
+          // std::cout << y_offset << std::endl;
 
-          GLint x_offset = w*v;
-          std::cout << x_offset << std::endl;
-          glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, x_offset, 0, w, h);
+          bind_map_for_reading(large_visibilities[which_texture], GL_TEXTURE2);
+
+          glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, y_offset, 0, 0, w, h);
           igl::opengl::report_gl_error("copy texture\n");
 
-          // if(count < side(2))
-          //   visibility_values.block(count*w*h, 0,
-          //                           w*h, 1) += visibility_slice;
-
-          // igl::writeDMAT("output_slice_"+std::to_string(count)+".dmat", visibility_slice,true);
+          y_offset += h;
 
           glBindVertexArray(0);
 
@@ -704,33 +719,31 @@ glfwSetCursorPosCallback(
          
       }
 
-      Eigen::Matrix< GLfloat,Eigen::Dynamic,Eigen::Dynamic,Eigen::RowMajor> visibility_slices;
-      visibility_slices.resize(num_views*w*h,1);
+      
+      
+      for(int i = 0; i < num_textures; i++)
+      {
+        bind_map_for_reading(large_visibilities[i],GL_TEXTURE2);
 
-      bind_map_for_reading(large_visibility,GL_TEXTURE2);
-      glReadPixels(0, 0, w*num_views, h, GL_RED, GL_FLOAT, visibility_slices.data());
-      igl::opengl::report_gl_error("read pixels\n");
+        Eigen::Matrix< GLfloat,Eigen::Dynamic,Eigen::Dynamic,Eigen::RowMajor> visibility_slices;
+        visibility_slices.resize(num_views*w*h,1);
+        glGetTexImage(GL_TEXTURE_2D, 0, GL_RED, GL_FLOAT, visibility_slices.data());
+        igl::opengl::report_gl_error("get tex\n");
+        // glClearTexImage(large_visibilities[i], 0, GL_RED, GL_FLOAT, NULL);
+        igl::opengl::report_gl_error("clear tex\n");
 
-      igl::writeDMAT("slices.dmat", visibility_slices, true);
+        int j = 0;
+        while(j < visibility_slices.rows())
+        {
+          // std::cout << "block " << "0, " << count*w*h <<", " << w*h << ", 1"
+          //           << " to " << j << ", " << "0, " << w*h << ", 1" << std::endl;
+          visibility_values.block(count*w*h, 0, w*h, 1) += visibility_slices.block(j, 0, w*h, 1);
+          j+=(w*h);
+        }
 
-
-      //if(count < side(2))
-      //   visibility_values.block(count*w*h, 0,
-      //                           w*h, 1) += visibility_slice;
-
-      // glFlush();
-      // glfwSwapBuffers(window);
-
-      // {
-      //   glfwPollEvents();
-      //   // In microseconds
-      //   double duration = 1000000.*(igl::get_seconds()-tic);
-      //   const double min_duration = 1000000./60.;
-      //   if(duration<min_duration)
-      //   {
-      //     std::this_thread::sleep_for(std::chrono::microseconds((int)(min_duration-duration)));
-      //   }
-      // }
+        
+        // igl::writeDMAT("slices"+std::to_string(i)+".dmat", visibility_slices, true);
+      }
 
       z_slice += step;
       count++;
@@ -751,7 +764,7 @@ glfwSetCursorPosCallback(
   Eigen::MatrixXi F_voxels_mc;
   std::cout << side << std::endl;
 
-  double isovalue = 0.8;
+  double isovalue = 1.0;
   // voxelize
   make_voxels_from_visibility(S, GV, side, isovalue, V_voxels, F_voxels);
   std::cout << V_voxels.rows() << ", " << V_voxels.cols() << std::endl;
