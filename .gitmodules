@@ -16,3 +16,6 @@
 [submodule "GAUSS"]
 	path = GAUSS
 	url = https://github.com/dilevin/GAUSS
+[submodule "DGtal"]
+	path = DGtal
+	url = https://github.com/DGtal-team/DGtal
