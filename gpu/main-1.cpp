@@ -414,14 +414,20 @@ glfwSetCursorPosCallback(
   visibility_values.resize(w*h*number_of_slices,1);
 
   // Main display routine
-  double tic = igl::get_seconds();
+  const auto & tictoc = []()
+  {
+    static double t_start = igl::get_seconds();
+    double diff = igl::get_seconds()-t_start;
+    t_start += diff;
+    return diff;
+  };
+
   while(z_slice < max_z)
   {
     std::cout << "Z SLICE NUMBER: " << count << std::endl;
     std::cout << "Z SLICE DEPTH: " << z_slice << std::endl;
     std::cout << "-----" << std::endl;
 
-    std::cout << "slice tic " << tic << std::endl;
 
 
     if(any_changed({argv[1]},time_of_last_json_load))
@@ -507,7 +513,7 @@ glfwSetCursorPosCallback(
         init_shadow_buffer(visibility_map_even, FBO_render_even, q_prog_id, w, h, "color");
         igl::opengl::report_gl_error("init shadow buffer\n");
 
-        // std::cout << "view tic " << v << " " << tic << std::endl;
+        std::cout << "view tic " << v << " " << tictoc() << std::endl;
 
         Eigen::Vector3f viewpoint = views.row(v);
         Eigen::Vector3f l = centroid - viewpoint;
@@ -660,18 +666,6 @@ glfwSetCursorPosCallback(
         glFlush();
         glfwSwapBuffers(window);
         igl::opengl::report_gl_error("flush\n");
-
-        {
-          glfwPollEvents();
-          // In microseconds
-          double duration = 1000000.*(igl::get_seconds()-tic);
-          const double min_duration = 1000000./60.;
-          if(duration<min_duration)
-          {
-            std::this_thread::sleep_for(std::chrono::microseconds((int)(min_duration-duration)));
-          }
-        }
-        igl::opengl::report_gl_error("poll\n");
 
         glDeleteTextures(1,&shadow_map);
         glDeleteTextures(1,&visibility_map_even);
