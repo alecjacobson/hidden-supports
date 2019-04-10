@@ -1,14 +1,14 @@
 #version 410 core
-layout (location = 0) in highp vec3 aPos;
+layout (location = 0) in  vec3 aPos;
 
 // const int MAX_VIEWS = 100; 
 
-uniform highp mat4 light_proj;
-uniform highp mat4 proj;
-uniform highp mat4 model;
+uniform  mat4 light_proj;
+uniform  mat4 proj;
+uniform  mat4 model;
 // uniform mat4 light_views[MAX_VIEWS];
-uniform highp mat4 light_view;
-uniform highp mat4 view;
+uniform  mat4 light_view;
+uniform  mat4 view;
 
 void main()
 {
