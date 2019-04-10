@@ -39,7 +39,7 @@
 #include "generate_views.h"
 
 // int w=512,h=301;
-int w=200,h=169;
+int w=200,h=139;
 int d=200;
 int t_w,t_h;
 float ratio = 0.0;
@@ -376,26 +376,6 @@ glfwSetCursorPosCallback(
 
   float fl_max_slices_per_texture = (number_of_slices) / num_textures;
   int max_slices_per_texture = std::floor(fl_max_slices_per_texture);
-
-  GLuint large_visibilities[num_textures];
-
-  if(num_textures > 1)
-  {
-    for(int i = 0; i < num_textures; i++)
-    {
-      init_shadow_buffer(large_visibilities[i], FBO_large, render_prog_id, 
-          w, h*max_slices_per_texture, "none");
-      std::cout << "SIZE " << w << " by " << h*max_slices_per_texture << std::endl;
-    }
-  }
-  else
-  {
-    init_shadow_buffer(large_visibilities[0], FBO_large, render_prog_id, 
-        w, h*(number_of_slices), "none");
-    igl::opengl::report_gl_error("init large shadow buffer\n");
-    std::cout << "SIZE " << w << " by " << h*(number_of_slices) << std::endl;
-  }
-
   
 
   float start_time = igl::get_seconds();
@@ -415,6 +395,8 @@ glfwSetCursorPosCallback(
 
   // Main display routine
   double tic = igl::get_seconds();
+  GLuint large_visibilities[num_textures];
+  
   while(z_slice < max_z)
   {
     std::cout << "Z SLICE NUMBER: " << count << std::endl;
@@ -495,6 +477,23 @@ glfwSetCursorPosCallback(
       }
     }
       igl::opengl::report_gl_error("loaded shaders\n");
+
+      if(num_textures > 1)
+      {
+        for(int i = 0; i < num_textures; i++)
+        {
+          init_shadow_buffer(large_visibilities[i], FBO_large, render_prog_id, 
+              w, h*max_slices_per_texture, "none");
+          std::cout << "SIZE " << w << " by " << h*max_slices_per_texture << std::endl;
+        }
+      }
+      else
+      {
+        init_shadow_buffer(large_visibilities[0], FBO_large, render_prog_id, 
+            w, h*(number_of_slices), "none");
+        igl::opengl::report_gl_error("init large shadow buffer\n");
+        std::cout << "SIZE " << w << " by " << h*(number_of_slices) << std::endl;
+      }
 
       for(int v = 0; v < views.rows(); v++)
       {
@@ -719,11 +718,16 @@ glfwSetCursorPosCallback(
       count++;
       copy_count++;
       
+      glDeleteFramebuffers(1,&FBO_large);
+      for(int i = 0; i < num_textures; i++)
+      {
+        glDeleteTextures(1,&large_visibilities[i]);
+      }
+
     }
 
 
     glDeleteVertexArrays(1,&VAO);
-    glDeleteFramebuffers(1,&FBO_large);
 
     Eigen::Matrix< GLfloat,Eigen::Dynamic,Eigen::Dynamic,Eigen::RowMajor> visibility_slices;
     visibility_slices.resize((number_of_slices)*w*h,1);
