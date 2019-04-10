@@ -71,8 +71,8 @@ inline void init_shadow_buffer(
       bool status = glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE;
       if(!status)
           std::cout << "Could not initialize FBO :(" << std::endl;
-      else
-          std::cout << "FBO ready!" << std::endl;
+      // else
+          // std::cout << "FBO ready!" << std::endl;
 
     }
     glBindFramebuffer(GL_FRAMEBUFFER, 0);

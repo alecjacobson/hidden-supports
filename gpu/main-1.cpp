@@ -39,8 +39,8 @@
 #include "generate_views.h"
 
 // int w=512,h=301;
-int w=300,h=208;
-int d=300;
+int w=200,h=169;
+int d=200;
 int t_w,t_h;
 float ratio = 0.0;
 
@@ -414,16 +414,15 @@ glfwSetCursorPosCallback(
   visibility_values.resize(w*h*number_of_slices,1);
 
   // Main display routine
+  double tic = igl::get_seconds();
   while(z_slice < max_z)
   {
     std::cout << "Z SLICE NUMBER: " << count << std::endl;
     std::cout << "Z SLICE DEPTH: " << z_slice << std::endl;
     std::cout << "-----" << std::endl;
 
-    igl::opengl::report_gl_error("start of loop\n");
-
-    double tic = igl::get_seconds();
     std::cout << "slice tic " << tic << std::endl;
+
 
     if(any_changed({argv[1]},time_of_last_json_load))
     {
@@ -508,7 +507,7 @@ glfwSetCursorPosCallback(
         init_shadow_buffer(visibility_map_even, FBO_render_even, q_prog_id, w, h, "color");
         igl::opengl::report_gl_error("init shadow buffer\n");
 
-        std::cout << "view tic " << v << " " << tic << std::endl;
+        // std::cout << "view tic " << v << " " << tic << std::endl;
 
         Eigen::Vector3f viewpoint = views.row(v);
         Eigen::Vector3f l = centroid - viewpoint;
@@ -702,7 +701,7 @@ glfwSetCursorPosCallback(
 
       bind_map_for_reading(large_visibilities[which_texture], GL_TEXTURE2);
       glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, y_offset, 0, 0, w, h);
-      std::cout << "copy texture tic " << tic << std::endl;
+      // std::cout << "copy texture tic " << tic << std::endl;
       igl::opengl::report_gl_error("copy texture\n");
 
       y_offset += h;
