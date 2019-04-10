@@ -211,7 +211,7 @@ int main(int argc, char * argv[])
   // perspective(-light_right, light_right, -light_top, light_top, near, far, proj);
 
   // get view rays
-  float num_views = 50.0;
+  float num_views = 10.0;
   Eigen::Vector3f bottom_left = V.colwise().minCoeff();
 	Eigen::Vector3f top_right = V.colwise().maxCoeff();
 	Eigen::MatrixXf views;
@@ -696,11 +696,11 @@ glfwSetCursorPosCallback(
 
 
       glReadPixels(0, 0, w, h, GL_RED, GL_FLOAT, visibility_slice.data());
-      igl::writeDMAT("slice"+std::to_string(count)+".dmat", visibility_slice, true);
+      // igl::writeDMAT("slice"+std::to_string(count)+".dmat", visibility_slice, true);
 
       if(count < side(2))
       {
-            visibility_values.block(count*w*h, 0, w*h, 1) = visibility_slice;
+        visibility_values.block(count*w*h, 0, w*h, 1) = visibility_slice;
       }
 
       z_slice += step;
