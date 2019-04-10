@@ -211,7 +211,7 @@ int main(int argc, char * argv[])
   // perspective(-light_right, light_right, -light_top, light_top, near, far, proj);
 
   // get view rays
-  float num_views = 500.0;
+  float num_views = 10000.0;
   Eigen::Vector3f bottom_left = V.colwise().minCoeff();
 	Eigen::Vector3f top_right = V.colwise().maxCoeff();
 	Eigen::MatrixXf views;
@@ -400,9 +400,9 @@ glfwSetCursorPosCallback(
 
   float start_time = igl::get_seconds();
 
-  z_slice = min_z;
-  // z_slice = min_z + (number_of_slices/2)*step;
-  // max_z = z_slice + step;
+  // z_slice = min_z;
+  z_slice = min_z + (number_of_slices/2)*step;
+  max_z = z_slice + step;
 
   int count = 0;
   int copy_count = 0;
@@ -502,16 +502,18 @@ glfwSetCursorPosCallback(
     }
       igl::opengl::report_gl_error("loaded shaders\n");
 
+      init_shadow_buffer(shadow_map, FBO, q_prog_id, t_w, t_h, "depth");
+      igl::opengl::report_gl_error("init shadow buffer\n");
+
+      init_shadow_buffer(visibility_map_odd, FBO_render_odd, q_prog_id, w, h, "color");
+      igl::opengl::report_gl_error("init shadow buffer\n");
+
+      init_shadow_buffer(visibility_map_even, FBO_render_even, q_prog_id, w, h, "color");
+      igl::opengl::report_gl_error("init shadow buffer\n");
+
       for(int v = 0; v < views.rows(); v++)
       {
-        init_shadow_buffer(shadow_map, FBO, q_prog_id, t_w, t_h, "depth");
-        igl::opengl::report_gl_error("init shadow buffer\n");
-
-        init_shadow_buffer(visibility_map_odd, FBO_render_odd, q_prog_id, w, h, "color");
-        igl::opengl::report_gl_error("init shadow buffer\n");
-
-        init_shadow_buffer(visibility_map_even, FBO_render_even, q_prog_id, w, h, "color");
-        igl::opengl::report_gl_error("init shadow buffer\n");
+        
 
         std::cout << "view tic " << v << " " << tictoc() << std::endl;
 
@@ -667,15 +669,17 @@ glfwSetCursorPosCallback(
         glfwSwapBuffers(window);
         igl::opengl::report_gl_error("flush\n");
 
-        glDeleteTextures(1,&shadow_map);
-        glDeleteTextures(1,&visibility_map_even);
-        glDeleteTextures(1,&visibility_map_odd);
-
-        glDeleteFramebuffers(1,&FBO);
-        glDeleteFramebuffers(1,&FBO_render_odd);
-        glDeleteFramebuffers(1,&FBO_render_even);
+      
         
       }
+      glDeleteTextures(1,&shadow_map);
+      glDeleteTextures(1,&visibility_map_even);
+      glDeleteTextures(1,&visibility_map_odd);
+
+      glDeleteFramebuffers(1,&FBO);
+      glDeleteFramebuffers(1,&FBO_render_odd);
+      glDeleteFramebuffers(1,&FBO_render_even);
+
       // end of view for loop
 
       Eigen::Matrix< GLfloat,Eigen::Dynamic,Eigen::Dynamic,Eigen::RowMajor> visibility_slice;
