@@ -1,24 +1,24 @@
 #version 410 core
-out vec4 FragColor;
+out mediump vec4 FragColor;
 
-in vec2 tex_coord_out;
-in vec4 pos_cam_space;
-in vec4 pos_light_space;
+in mediump vec2 tex_coord_out;
+in mediump vec4 pos_cam_space;
+in mediump vec4 pos_light_space;
 
-uniform sampler2D shadow_map;
-uniform sampler2D visibility_map;
+uniform mediump sampler2D shadow_map;
+uniform mediump sampler2D visibility_map;
 
-uniform float near_plane;
-uniform float far_plane;
+uniform mediump float near_plane;
+uniform mediump float far_plane;
 
-uniform int index;
+uniform mediump int index;
 
-uniform mat4 proj;
-uniform mat4 light_proj;
-uniform mat4 view;
-uniform mat4 light_view;
+uniform mediump mat4 proj;
+uniform mediump mat4 light_proj;
+uniform mediump mat4 view;
+uniform mediump mat4 light_view;
 
-uniform vec3 light_source;
+uniform mediump vec3 light_source;
 
 
 
