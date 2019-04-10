@@ -367,15 +367,6 @@ glfwSetCursorPosCallback(
     return false;
   };
 
-  init_shadow_buffer(shadow_map, FBO, q_prog_id, t_w, t_h, "depth");
-  igl::opengl::report_gl_error("init shadow buffer\n");
-
-  init_shadow_buffer(visibility_map_odd, FBO_render_odd, q_prog_id, w, h, "color");
-  igl::opengl::report_gl_error("init shadow buffer\n");
-
-  init_shadow_buffer(visibility_map_even, FBO_render_even, q_prog_id, w, h, "color");
-  igl::opengl::report_gl_error("init shadow buffer\n");
-
 
   float fl_num_textures = (float)(w*h) / (float)(t_dims[0]);
   std::cout << "FLOAT NUM TEXTURES " << fl_num_textures << std::endl;
@@ -508,6 +499,15 @@ glfwSetCursorPosCallback(
 
       for(int v = 0; v < views.rows(); v++)
       {
+        init_shadow_buffer(shadow_map, FBO, q_prog_id, t_w, t_h, "depth");
+        igl::opengl::report_gl_error("init shadow buffer\n");
+
+        init_shadow_buffer(visibility_map_odd, FBO_render_odd, q_prog_id, w, h, "color");
+        igl::opengl::report_gl_error("init shadow buffer\n");
+
+        init_shadow_buffer(visibility_map_even, FBO_render_even, q_prog_id, w, h, "color");
+        igl::opengl::report_gl_error("init shadow buffer\n");
+
         std::cout << "view tic " << v << " " << tic << std::endl;
 
         Eigen::Vector3f viewpoint = views.row(v);
@@ -673,8 +673,17 @@ glfwSetCursorPosCallback(
           }
         }
         igl::opengl::report_gl_error("poll\n");
+
+        glDeleteTextures(1,&shadow_map);
+        glDeleteTextures(1,&visibility_map_even);
+        glDeleteTextures(1,&visibility_map_odd);
+
+        glDeleteFramebuffers(1,&FBO);
+        glDeleteFramebuffers(1,&FBO_render_odd);
+        glDeleteFramebuffers(1,&FBO_render_even);
         
       }
+      // end of view for loop
 
       Eigen::Matrix< GLfloat,Eigen::Dynamic,Eigen::Dynamic,Eigen::RowMajor> visibility_slice;
             visibility_slice.resize(w*h,1);
@@ -712,6 +721,11 @@ glfwSetCursorPosCallback(
       copy_count++;
       
     }
+
+
+    glDeleteVertexArrays(1,&VAO);
+    glDeleteFramebuffers(1,&FBO_large);
+
     Eigen::Matrix< GLfloat,Eigen::Dynamic,Eigen::Dynamic,Eigen::RowMajor> visibility_slices;
     visibility_slices.resize((number_of_slices)*w*h,1);
     for(int i = 0; i < num_textures; i++)
@@ -791,9 +805,6 @@ glfwSetCursorPosCallback(
   {
     std::cout << views.row(i) << std::endl;
   }
-
-  glDeleteVertexArrays(1,&VAO);
-  glDeleteFramebuffers(1,&FBO);
 
   glfwDestroyWindow(window);
   glfwTerminate();
