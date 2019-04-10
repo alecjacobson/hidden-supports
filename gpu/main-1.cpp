@@ -54,8 +54,6 @@ GLuint render_prog_id=0;
 GLuint VAO,Q_VAO;
 GLuint FBO,FBO_render_even,FBO_render_odd,FBO_large;
 GLuint shadow_map,visibility_map_even,visibility_map_odd;
-//,large_visibility;
-// GLuint fbo_render,visible_slice;
 
 bool wire_frame = false;
 bool mouse_down = false;
@@ -379,33 +377,33 @@ glfwSetCursorPosCallback(
   igl::opengl::report_gl_error("init shadow buffer\n");
 
 
-  float fl_num_textures = (float)(w*h) / (float)(t_dims[0]);
-  std::cout << "FLOAT NUM TEXTURES " << fl_num_textures << std::endl;
+  // float fl_num_textures = (float)(w*h) / (float)(t_dims[0]);
+  // std::cout << "FLOAT NUM TEXTURES " << fl_num_textures << std::endl;
 
-  int num_textures = std::ceil(fl_num_textures);
-  std::cout << "NUM TEXTURES " << num_textures << std::endl;
+  // int num_textures = std::ceil(fl_num_textures);
+  // std::cout << "NUM TEXTURES " << num_textures << std::endl;
 
-  float fl_max_slices_per_texture = (number_of_slices+1) / num_textures;
-  int max_slices_per_texture = std::floor(fl_max_slices_per_texture);
+  // float fl_max_slices_per_texture = (number_of_slices+1) / num_textures;
+  // int max_slices_per_texture = std::floor(fl_max_slices_per_texture);
 
-  GLuint large_visibilities[num_textures];
+  // GLuint large_visibilities[num_textures];
 
-  if(num_textures > 1)
-  {
-    for(int i = 0; i < num_textures; i++)
-    {
-      init_shadow_buffer(large_visibilities[i], FBO_large, render_prog_id, 
-          w, h*max_slices_per_texture, "none");
-      std::cout << "SIZE " << w << " by " << h*max_slices_per_texture << std::endl;
-    }
-  }
-  else
-  {
-    init_shadow_buffer(large_visibilities[0], FBO_large, render_prog_id, 
-        w, h*(number_of_slices+1), "none");
-    igl::opengl::report_gl_error("init large shadow buffer\n");
-    std::cout << "SIZE " << w << " by " << h*(number_of_slices+1) << std::endl;
-  }
+  // if(num_textures > 1)
+  // {
+  //   for(int i = 0; i < num_textures; i++)
+  //   {
+  //     init_shadow_buffer(large_visibilities[i], FBO_large, render_prog_id, 
+  //         w, h*max_slices_per_texture, "none");
+  //     std::cout << "SIZE " << w << " by " << h*max_slices_per_texture << std::endl;
+  //   }
+  // }
+  // else
+  // {
+  //   init_shadow_buffer(large_visibilities[0], FBO_large, render_prog_id, 
+  //       w, h*(number_of_slices+1), "none");
+  //   igl::opengl::report_gl_error("init large shadow buffer\n");
+  //   std::cout << "SIZE " << w << " by " << h*(number_of_slices+1) << std::endl;
+  // }
 
   
 
@@ -502,9 +500,9 @@ glfwSetCursorPosCallback(
     }
       igl::opengl::report_gl_error("loaded shaders\n");
 
-      int which_texture = 0;
-      int tex_dims = t_dims[0];
-      GLint y_offset = 0;
+      // int which_texture = 0;
+      // int tex_dims = t_dims[0];
+      // GLint y_offset = 0;
       for(int v = 0; v < views.rows(); v++)
       {
 
@@ -678,62 +676,62 @@ glfwSetCursorPosCallback(
             visibility_slice.resize(w*h,1);
 
 
-      if (count >= max_slices_per_texture)
-      { 
-        which_texture++; 
-        tex_dims = t_dims[0] * (which_texture+1);
-        y_offset = 0;
-        count = 0;
-      }
-      
-      std::cout << "WHICH TEXTURE? " << which_texture << std::endl;
-      // std::cout << y_offset << std::endl;
-
-      bind_map_for_reading(large_visibilities[which_texture], GL_TEXTURE2);
-
-      glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, y_offset, 0, 0, w, h);
-      igl::opengl::report_gl_error("copy texture\n");
-
-      y_offset += h;
-
-
-      // glReadPixels(0, 0, w, h, GL_RED, GL_FLOAT, visibility_slice.data());
-      // igl::writeDMAT("slice"+std::to_string(count)+".dmat", visibility_slice, true);
-
-      // if(count < side(2))
-      // {
-      //       visibility_values.block(count*w*h, 0, w*h, 1) = visibility_slice;
+      // if (count >= max_slices_per_texture)
+      // { 
+      //   which_texture++; 
+      //   tex_dims = t_dims[0] * (which_texture+1);
+      //   y_offset = 0;
+      //   count = 0;
       // }
+      
+      // std::cout << "WHICH TEXTURE? " << which_texture << std::endl;
+      // // std::cout << y_offset << std::endl;
+
+      // bind_map_for_reading(large_visibilities[which_texture], GL_TEXTURE2);
+
+      // glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, y_offset, 0, 0, w, h);
+      // igl::opengl::report_gl_error("copy texture\n");
+
+      // y_offset += h;
+
+
+      glReadPixels(0, 0, w, h, GL_RED, GL_FLOAT, visibility_slice.data());
+      igl::writeDMAT("slice"+std::to_string(count)+".dmat", visibility_slice, true);
+
+      if(count < side(2))
+      {
+            visibility_values.block(count*w*h, 0, w*h, 1) = visibility_slice;
+      }
 
       z_slice += step;
       count++;
       
     }
-    Eigen::Matrix< GLfloat,Eigen::Dynamic,Eigen::Dynamic,Eigen::RowMajor> visibility_slices;
-    visibility_slices.resize((number_of_slices+1)*w*h,1);
-    for(int i = 0; i < num_textures; i++)
-    {
-        bind_map_for_reading(large_visibilities[i],GL_TEXTURE2);
+    // Eigen::Matrix< GLfloat,Eigen::Dynamic,Eigen::Dynamic,Eigen::RowMajor> visibility_slices;
+    // visibility_slices.resize((number_of_slices+1)*w*h,1);
+    // for(int i = 0; i < num_textures; i++)
+    // {
+    //     bind_map_for_reading(large_visibilities[i],GL_TEXTURE2);
 
-        Eigen::Matrix< GLfloat,Eigen::Dynamic,Eigen::Dynamic,Eigen::RowMajor> visibility_slices;
-        visibility_slices.resize(max_slices_per_texture*w*h,1);
+    //     Eigen::Matrix< GLfloat,Eigen::Dynamic,Eigen::Dynamic,Eigen::RowMajor> visibility_slices;
+    //     visibility_slices.resize(max_slices_per_texture*w*h,1);
 
-        glGetTexImage(GL_TEXTURE_2D, 0, GL_RED, GL_FLOAT, visibility_slices.data());
-        igl::opengl::report_gl_error("get tex\n");
-        // glClearTexImage(large_visibilities[i], 0, GL_RED, GL_FLOAT, NULL);
-        // igl::opengl::report_gl_error("clear tex\n");
+    //     glGetTexImage(GL_TEXTURE_2D, 0, GL_RED, GL_FLOAT, visibility_slices.data());
+    //     igl::opengl::report_gl_error("get tex\n");
+    //     // glClearTexImage(large_visibilities[i], 0, GL_RED, GL_FLOAT, NULL);
+    //     // igl::opengl::report_gl_error("clear tex\n");
 
-        // std::cout << "BLOCK " << "0, " << i*max_slices_per_texture*w*h << ", " 
-        //           << max_slices_per_texture*w*h << ", 1" << 
-        //           " to 0, 0, " <<max_slices_per_texture*w*h << ", 1" << std::endl;
+    //     // std::cout << "BLOCK " << "0, " << i*max_slices_per_texture*w*h << ", " 
+    //     //           << max_slices_per_texture*w*h << ", 1" << 
+    //     //           " to 0, 0, " <<max_slices_per_texture*w*h << ", 1" << std::endl;
 
-        visibility_values.block(
-                  i*max_slices_per_texture*w*h, 0,
-                  max_slices_per_texture*w*h, 1)
-                  = visibility_slices.block(0,0,max_slices_per_texture*w*h, 1);
+    //     visibility_values.block(
+    //               i*max_slices_per_texture*w*h, 0,
+    //               max_slices_per_texture*w*h, 1)
+    //               = visibility_slices.block(0,0,max_slices_per_texture*w*h, 1);
         
-        igl::writeDMAT("slices"+std::to_string(i)+".dmat", visibility_slices, true);
-    }
+    //     igl::writeDMAT("slices"+std::to_string(i)+".dmat", visibility_slices, true);
+    // }
 
   std::cout << "size of vector: " << visibility_values.rows() << std::endl;
   Eigen::VectorXf S(Eigen::Map<Eigen::VectorXf>(visibility_values.data(), 
