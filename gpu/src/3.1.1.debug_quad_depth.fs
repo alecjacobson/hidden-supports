@@ -6,9 +6,12 @@ in vec4 pos_cam_space;
 in vec4 pos_light_space;
 
 uniform sampler2D shadow_map;
+uniform sampler2D visibility_map;
 
 uniform float near_plane;
 uniform float far_plane;
+
+uniform int index;
 
 uniform mat4 proj;
 uniform mat4 light_proj;
@@ -67,6 +70,7 @@ float ShadowCalculation(vec4 light_space_position, vec4 cam_space_position)
     if(projected_coords.z > 1.0)
         shadow = 0.0;
         
+    // return texture(visibility_map, projected_coords.xy).r;
     return shadow;
 
 }
@@ -78,5 +82,15 @@ void main()
     float in_shadow = ShadowCalculation(pos_light_space, pos_cam_space);                      
     vec3 lighting = (in_shadow) * color;
 
-    FragColor = vec4(lighting, 1.0);
+    vec3 projected_coords = pos_light_space.xyz / pos_light_space.w;
+    projected_coords = projected_coords * 0.5 + 0.5;
+
+    if (index != 0)
+    {
+        FragColor = vec4(lighting, 1.0) + texture(visibility_map, tex_coord_out);
+    }
+    else
+    {
+        FragColor = vec4(lighting, 1.0);
+    }
 }

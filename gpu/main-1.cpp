@@ -52,8 +52,9 @@ GLuint prog_id=0;
 GLuint q_prog_id=0;
 GLuint render_prog_id=0;
 GLuint VAO,Q_VAO;
-GLuint FBO,FBO_render,FBO_large;
-GLuint shadow_map,visibility_map,large_visibility;
+GLuint FBO,FBO_render_even,FBO_render_odd,FBO_large;
+GLuint shadow_map,visibility_map_even,visibility_map_odd;
+//,large_visibility;
 // GLuint fbo_render,visible_slice;
 
 bool wire_frame = false;
@@ -146,16 +147,6 @@ int main(int argc, char * argv[])
     return EXIT_FAILURE;
   }
 
-
-  std::cout<<R"(
-  Usage:
-    [Click and drag]  to orbit view
-    [Scroll]  to translate view in and out
-    A,a  toggle animation
-    L,l  toggle wireframe rending
-    Z,z  reset view to look along z-axis
-  )";
-
   glfwSetWindowPos(window,0,0);
   glfwMakeContextCurrent(window);
 
@@ -180,29 +171,17 @@ int main(int argc, char * argv[])
   // Read input scene from file
   igl::readSTL(argv[4], V, F, N);
 
-  std::cout << "original max and min" << std::endl;
-  std::cout << V.colwise().maxCoeff() << std::endl;
-  std::cout << V.colwise().minCoeff() << std::endl;
   Eigen::RowVector3f translation = V.colwise().mean();
-  // translation = Eigen::RowVector3f(translation(0), translation(1), 0.0);
   V.rowwise() -= translation;
-  std::cout << "translation " << translation << std::endl;
-  std::cout << "translated max and min" << std::endl;
-  std::cout << V.colwise().maxCoeff() << std::endl;
-  std::cout << V.colwise().minCoeff() << std::endl;
+
   float scale_factor = (V.colwise().maxCoeff()-V.colwise().minCoeff()).maxCoeff();
-  std::cout << "scale factor " << scale_factor << std::endl;
   V /= scale_factor;
-  std::cout << "scaled max and min" << std::endl;
-  std::cout << V.colwise().maxCoeff() << std::endl;
-  std::cout << V.colwise().minCoeff() << std::endl;
 
   Eigen::Vector3f centroid;
   igl::centroid(V,F,centroid);
-  std::cout << centroid << " CENTROID " << std::endl;
   // look_at(Eigen::Vector3f(0,0,-1), Eigen::Vector3f(0,1,0), centroid, view);
 
-  // // make voxel grid
+  // make voxel grid
   Eigen::MatrixXf GV;
   Eigen::Vector3i side;
   Eigen::Matrix<int,Eigen::Dynamic,3,Eigen::RowMajor>  F_int = F.cast <int> ();
@@ -227,11 +206,6 @@ int main(int argc, char * argv[])
   int number_of_slices = side(2);
   step = z_range / number_of_slices;
 
-  // glfwSetWindowShouldClose(window,true);
-  // window = glfwCreateWindow(w, h, "visibility", NULL, NULL);
-  // glfwSetWindowPos(window,0,0);
-  // glfwMakeContextCurrent(window);
-
   // Projection and modelview matrices
   perspective(-light_right, light_right, -light_top, light_top, near, far, light_proj);
   // Orthographic projection matrix
@@ -239,37 +213,12 @@ int main(int argc, char * argv[])
   // perspective(-light_right, light_right, -light_top, light_top, near, far, proj);
 
   // get view rays
-  float num_views = 10.0;
+  float num_views = 50.0;
   Eigen::Vector3f bottom_left = V.colwise().minCoeff();
 	Eigen::Vector3f top_right = V.colwise().maxCoeff();
 	Eigen::MatrixXf views;
 	generate_views(bottom_left, top_right, num_views, views);
 	std::cout << "generated viewing rays" << std::endl;
-  // std::vector<GLfloat*> light_views((int)num_views);
-
-  // precompute light view matrices
-  /*
-  for(int v = 0; v < views.rows(); v++)
-  {
-    Eigen::Vector3f viewpoint = views.row(v);
-    Eigen::Vector3f l = centroid - viewpoint;
-    l.normalize();
-    Eigen::Vector3f n = -(viewpoint - Eigen::Vector3f(0,0,1));
-    n.normalize();
-    float cos_spin_angle = n.dot(l);
-    // if x value is negative, then rotate positive angle
-    float spin_angle = (viewpoint(0) < 0) ? acos(cos_spin_angle) : -1*acos(cos_spin_angle);
-
-    Eigen::Affine3f light_view = Eigen::Affine3f::Identity() * 
-      Eigen::Translation3f(views.row(v));
-    light_view.rotate(
-      Eigen::AngleAxisf(
-        spin_angle,
-        Eigen::Vector3f(0,1,0)));
-
-    light_views[v] = light_view.data();
-  }
-  */
 
   igl::readOBJ("../data/u-quad.obj", Q_V, Q_TC, Q_N, Q_F, Q_FTC, Q_FN);
   Q_V.rowwise() -= Q_V.colwise().mean();
@@ -423,55 +372,54 @@ glfwSetCursorPosCallback(
   init_shadow_buffer(shadow_map, FBO, q_prog_id, t_w, t_h, "depth");
   igl::opengl::report_gl_error("init shadow buffer\n");
 
-  init_shadow_buffer(visibility_map, FBO_render, render_prog_id, w, h, "color");
+  init_shadow_buffer(visibility_map_odd, FBO_render_odd, q_prog_id, w, h, "color");
   igl::opengl::report_gl_error("init shadow buffer\n");
 
-  float fl_num_textures = h*num_views / t_dims[0];
+  init_shadow_buffer(visibility_map_even, FBO_render_even, q_prog_id, w, h, "color");
+  igl::opengl::report_gl_error("init shadow buffer\n");
+
+
+  float fl_num_textures = (float)(w*h) / (float)(t_dims[0]);
+  std::cout << "FLOAT NUM TEXTURES " << fl_num_textures << std::endl;
+
   int num_textures = std::ceil(fl_num_textures);
+  std::cout << "NUM TEXTURES " << num_textures << std::endl;
+
+  float fl_max_slices_per_texture = (number_of_slices+1) / num_textures;
+  int max_slices_per_texture = std::floor(fl_max_slices_per_texture);
+
   GLuint large_visibilities[num_textures];
-  // std::cout << num_textures << std::endl;
+
   if(num_textures > 1)
   {
     for(int i = 0; i < num_textures; i++)
     {
-      if(i == num_textures)
-      {
-        init_shadow_buffer(large_visibilities[i], FBO_large, render_prog_id, w, h*num_views, "none");
-        std::cout << "SIZE " << w << " by " << h*num_views << std::endl;
-      }
-      else
-      {
-        init_shadow_buffer(large_visibilities[i], FBO_large, render_prog_id, w, t_dims[0], "none");
-        std::cout << "SIZE " << w << " by " << t_dims[0] << std::endl;
-      }
+      init_shadow_buffer(large_visibilities[i], FBO_large, render_prog_id, 
+          w, h*max_slices_per_texture, "none");
+      std::cout << "SIZE " << w << " by " << h*max_slices_per_texture << std::endl;
     }
   }
   else
   {
-    init_shadow_buffer(large_visibilities[0], FBO_large, render_prog_id, w, h*num_views, "none");
+    init_shadow_buffer(large_visibilities[0], FBO_large, render_prog_id, 
+        w, h*(number_of_slices+1), "none");
     igl::opengl::report_gl_error("init large shadow buffer\n");
-    std::cout << "SIZE " << w << " by " << h*num_views << std::endl;
+    std::cout << "SIZE " << w << " by " << h*(number_of_slices+1) << std::endl;
   }
+
   
 
   float start_time = igl::get_seconds();
 
-  // float factor = std::abs(light_view.matrix()(2,3));
-  // light_view.rotate(
-  //     Eigen::AngleAxisf(
-  //     -0.1*factor/float(w),
-  //     Eigen::Vector3f(0,1,0)));
-
-  z_slice = min_z;// + (number_of_slices/2)*step;
-  //max_z = z_slice + step;
+  z_slice = min_z;
+  // z_slice = min_z + (number_of_slices/2)*step;
+  // max_z = z_slice + step;
 
   int count = 0;
   Eigen::Matrix< GLfloat,Eigen::Dynamic,Eigen::Dynamic,Eigen::RowMajor> visibility_values;
-      visibility_values.resize(w*h*(number_of_slices+1),1);
+  visibility_values.resize(w*h*number_of_slices,1);
 
   // Main display routine
-  // while (!glfwWindowShouldClose(window))
-  // {
   while(z_slice < max_z)
   {
     std::cout << "Z SLICE NUMBER: " << count << std::endl;
@@ -559,195 +507,232 @@ glfwSetCursorPosCallback(
       GLint y_offset = 0;
       for(int v = 0; v < views.rows(); v++)
       {
-          // std::cout << "view " << views.row(v) << std::endl; 
-          // look_at(views.row(v), Eigen::Vector3f(0,1,0), centroid, light_view);
-          Eigen::Vector3f viewpoint = views.row(v);
-          Eigen::Vector3f l = centroid - viewpoint;
-          l.normalize();
-          Eigen::Vector3f n = -(viewpoint - Eigen::Vector3f(0,0,1));
-          n.normalize();
-          float cos_spin_angle = n.dot(l);
-          // if x value is negative, then rotate positive angle
-          float spin_angle = (viewpoint(0) < 0) ? acos(cos_spin_angle) : -1*acos(cos_spin_angle);
 
-          light_view = Eigen::Affine3f::Identity() * 
-            Eigen::Translation3f(views.row(v));
-          light_view.rotate(
-            Eigen::AngleAxisf(
-              spin_angle,
-              Eigen::Vector3f(0,1,0)));
+        Eigen::Vector3f viewpoint = views.row(v);
+        Eigen::Vector3f l = centroid - viewpoint;
+        l.normalize();
+        Eigen::Vector3f n = -(viewpoint - Eigen::Vector3f(0,0,1));
+        n.normalize();
+        float cos_spin_angle = n.dot(l);
+        // if x value is negative, then rotate positive angle
+        float spin_angle = (viewpoint(0) < 0) ? acos(cos_spin_angle) : -1*acos(cos_spin_angle);
 
-          // clear screen and set viewport
-          glClearColor(1.0,1.0,1.0,0.);
-          glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-          igl::opengl::report_gl_error("cleared screen\n");
+        light_view = Eigen::Affine3f::Identity() * 
+          Eigen::Translation3f(views.row(v));
+        light_view.rotate(
+          Eigen::AngleAxisf(
+            spin_angle,
+            Eigen::Vector3f(0,1,0)));
+        // std::cout << "view " << views.row(v) << std::endl; 
+        // look_at(views.row(v), Eigen::Vector3f(0,1,0), centroid, light_view);
+
+        // clear screen and set viewport
+        // glClearColor(1.0,1.0,1.0,0.);
+        // glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        // igl::opengl::report_gl_error("cleared screen\n");
 
 
-          // select program and attach uniforms
-          glUseProgram(prog_id);
+        // select program and attach uniforms
+        glUseProgram(prog_id);
 
-          GLint light_proj_loc = glGetUniformLocation(prog_id,"light_proj");
-          glUniformMatrix4fv(light_proj_loc,1,GL_FALSE,light_proj.data());
-          GLint proj_loc = glGetUniformLocation(prog_id,"proj");
-          glUniformMatrix4fv(proj_loc,1,GL_FALSE,proj.data());
-          GLint model_loc = glGetUniformLocation(prog_id,"model");
-          glUniformMatrix4fv(model_loc,1,GL_FALSE,model.data());
-          GLint light_view_loc = glGetUniformLocation(prog_id,"light_view");
-          // glUniformMatrix4fv(light_view_loc,num_views,GL_FALSE,light_views[0]);
-          glUniformMatrix4fv(light_view_loc,1,GL_FALSE,light_view.data());
-          GLint p_view_loc = glGetUniformLocation(prog_id,"view");
-          glUniformMatrix4fv(p_view_loc,1,GL_FALSE,view.data());
+        GLint light_proj_loc = glGetUniformLocation(prog_id,"light_proj");
+        glUniformMatrix4fv(light_proj_loc,1,GL_FALSE,light_proj.data());
+        GLint proj_loc = glGetUniformLocation(prog_id,"proj");
+        glUniformMatrix4fv(proj_loc,1,GL_FALSE,proj.data());
+        GLint model_loc = glGetUniformLocation(prog_id,"model");
+        glUniformMatrix4fv(model_loc,1,GL_FALSE,model.data());
+        GLint light_view_loc = glGetUniformLocation(prog_id,"light_view");
+        // glUniformMatrix4fv(light_view_loc,num_views,GL_FALSE,light_views[0]);
+        glUniformMatrix4fv(light_view_loc,1,GL_FALSE,light_view.data());
+        GLint p_view_loc = glGetUniformLocation(prog_id,"view");
+        glUniformMatrix4fv(p_view_loc,1,GL_FALSE,view.data());
 
-          igl::opengl::report_gl_error("uniforms\n");
+        igl::opengl::report_gl_error("uniforms\n");
 
-          //////////
+        //////////
 
-          bind_map_for_writing(FBO);
+        bind_map_for_writing(FBO);
 
-          glClear(GL_DEPTH_BUFFER_BIT);
+        glClear(GL_DEPTH_BUFFER_BIT);
 
-          mesh_to_vao(prog_id, V, F, N, TC,VAO);
-          igl::opengl::report_gl_error("bind vao 1\n");
-          
-          glBindVertexArray(VAO);
+        mesh_to_vao(prog_id, V, F, N, TC,VAO);
+        igl::opengl::report_gl_error("bind vao 1\n");
+        
+        glBindVertexArray(VAO);
 
-          glViewport(0, 0, t_w, t_h);
+        glViewport(0, 0, t_w, t_h);
 
-          // draw elements to texture
-          glDrawElements(GL_TRIANGLES, F.size(), GL_UNSIGNED_INT, 0);
-          igl::opengl::report_gl_error("draw elements 1\n");
+        // draw elements to texture
+        glDrawElements(GL_TRIANGLES, F.size(), GL_UNSIGNED_INT, 0);
+        igl::opengl::report_gl_error("draw elements 1\n");
 
-          // Eigen::Matrix< GLubyte,Eigen::Dynamic,Eigen::Dynamic,Eigen::RowMajor> shadow;
-          // shadow.resize(t_w*t_h,1);
+        // Eigen::Matrix< GLubyte,Eigen::Dynamic,Eigen::Dynamic,Eigen::RowMajor> shadow;
+        // shadow.resize(t_w*t_h,1);
 
-          // glReadPixels(0, 0, t_w, t_h, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, shadow.data());
-          // igl::writeDMAT("texture"+std::to_string(v)+".dmat", shadow,true);
+        // glReadPixels(0, 0, t_w, t_h, GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, shadow.data());
+        // igl::writeDMAT("texture"+std::to_string(v)+".dmat", shadow,true);
 
-          glBindFramebuffer(GL_FRAMEBUFFER, 0);
-          igl::opengl::report_gl_error("unbind fbo 0\n");
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        igl::opengl::report_gl_error("unbind fbo 0\n");
 
-          glViewport(0, 0, w, h);
-          glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glViewport(0, 0, w, h);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-          ///////////
-          q_model << ratio, 0, 0, 0,
-                      0, 1, 0, 0,
-                      0, 0, 1, z_slice,
-                      0, 0, 0, 1;
+        ///////////
+        q_model << ratio, 0, 0, 0,
+                    0, 1, 0, 0,
+                    0, 0, 1, z_slice,
+                    0, 0, 0, 1;
 
-          // select program and attach uniforms
-          glUseProgram(q_prog_id);
-          GLint q_texture_loc = glGetUniformLocation(q_prog_id,"shadow_map");
-          glUniform1i(q_texture_loc, 0);
-          GLint q_near_loc = glGetUniformLocation(q_prog_id,"near_plane");
-          glUniform1f(q_near_loc, near);
-          GLint q_far_loc = glGetUniformLocation(q_prog_id,"far_plane");
-          glUniform1f(q_far_loc, far);
-          // GLint q_light_source_loc = glGetUniformLocation(q_prog_id,"light_source");
-          // glUniform3fv(q_light_source_loc,1,viewpoint.data());
-          GLint q_proj_loc = glGetUniformLocation(q_prog_id,"proj");
-          glUniformMatrix4fv(q_proj_loc,1,GL_FALSE,proj.data());
-          GLint q_light_proj_loc = glGetUniformLocation(q_prog_id,"light_proj");
-          glUniformMatrix4fv(q_light_proj_loc,1,GL_FALSE,light_proj.data());
-          GLint q_model_loc = glGetUniformLocation(q_prog_id,"model");
-          glUniformMatrix4fv(q_model_loc,1,GL_FALSE,model.data());
-          GLint q_q_model_loc = glGetUniformLocation(q_prog_id,"q_model");
-          glUniformMatrix4fv(q_q_model_loc,1,GL_FALSE,q_model.data());
-          GLint q_view_loc = glGetUniformLocation(q_prog_id,"view");
-          glUniformMatrix4fv(q_view_loc,1,GL_FALSE,view.data());
-          GLint q_light_view_loc = glGetUniformLocation(q_prog_id,"light_view");
-          // glUniformMatrix4fv(q_light_view_loc,num_views,GL_FALSE,light_views[0]);
-          glUniformMatrix4fv(q_light_view_loc,1,GL_FALSE,light_view.data());
-
-          mesh_to_vao(q_prog_id, Q_V, Q_F, Q_N, Q_TC,Q_VAO);
-
-          igl::opengl::report_gl_error("bind frame buffer for color reading\n");
-          bind_map_for_reading(shadow_map, GL_TEXTURE0);
-          bind_map_for_writing(FBO_render);
-
-          glBindVertexArray(Q_VAO);
-          
-          igl::opengl::report_gl_error("bind vao quad\n");
-          glDrawElements(GL_TRIANGLES, Q_F.size(), GL_UNSIGNED_INT, 0);
-          igl::opengl::report_gl_error("draw elements to offscreen buffer\n");
-
-          // Eigen::Matrix< GLfloat,Eigen::Dynamic,Eigen::Dynamic,Eigen::RowMajor> visibility_slice;
-          //       visibility_slice.resize(w*h,1);
-          // glReadPixels(0, 0, w, h, GL_RED, GL_FLOAT, visibility_slice.data());
-          // igl::writeDMAT("slice"+std::to_string(v)+".dmat", visibility_slice, true);
-
-          glFlush();
-          glfwSwapBuffers(window);
-                    
-          if (h*v > tex_dims || (y_offset+h) > t_dims[0])
-          { 
-            which_texture++; 
-            tex_dims = t_dims[0] * (which_texture+1);
-            y_offset = 0;
-          }
-          
-          // std::cout << "WHICH TEXTURE? " << which_texture << std::endl;
-          // std::cout << v*h << " " << tex_dims << std::endl;
-          // std::cout << y_offset << std::endl;
-
-          bind_map_for_reading(large_visibilities[which_texture], GL_TEXTURE2);
-
-          glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, y_offset, 0, 0, w, h);
-          igl::opengl::report_gl_error("copy texture\n");
-
-          y_offset += h;
-
-          glBindVertexArray(0);
-
-          ///////////
-
-          glFlush();
-          glfwSwapBuffers(window);
-          igl::opengl::report_gl_error("flush\n");
-
-          {
-            glfwPollEvents();
-            // In microseconds
-            double duration = 1000000.*(igl::get_seconds()-tic);
-            const double min_duration = 1000000./60.;
-            if(duration<min_duration)
-            {
-              std::this_thread::sleep_for(std::chrono::microseconds((int)(min_duration-duration)));
-            }
-          }
-          igl::opengl::report_gl_error("poll\n");
-         
-      }
-
-      
-      
-      for(int i = 0; i < num_textures; i++)
-      {
-        bind_map_for_reading(large_visibilities[i],GL_TEXTURE2);
-
-        Eigen::Matrix< GLfloat,Eigen::Dynamic,Eigen::Dynamic,Eigen::RowMajor> visibility_slices;
-        visibility_slices.resize(num_views*w*h,1);
-        glGetTexImage(GL_TEXTURE_2D, 0, GL_RED, GL_FLOAT, visibility_slices.data());
-        igl::opengl::report_gl_error("get tex\n");
-        // glClearTexImage(large_visibilities[i], 0, GL_RED, GL_FLOAT, NULL);
-        igl::opengl::report_gl_error("clear tex\n");
-
-        int j = 0;
-        while(j < visibility_slices.rows())
+        // select program and attach uniforms
+        glUseProgram(q_prog_id);
+        GLint q_texture_loc = glGetUniformLocation(q_prog_id,"shadow_map");
+        glUniform1i(q_texture_loc, 0);
+        GLint q_near_loc = glGetUniformLocation(q_prog_id,"near_plane");
+        glUniform1f(q_near_loc, near);
+        GLint q_far_loc = glGetUniformLocation(q_prog_id,"far_plane");
+        glUniform1f(q_far_loc, far);
+        GLint q_proj_loc = glGetUniformLocation(q_prog_id,"proj");
+        glUniformMatrix4fv(q_proj_loc,1,GL_FALSE,proj.data());
+        GLint q_light_proj_loc = glGetUniformLocation(q_prog_id,"light_proj");
+        glUniformMatrix4fv(q_light_proj_loc,1,GL_FALSE,light_proj.data());
+        GLint q_model_loc = glGetUniformLocation(q_prog_id,"model");
+        glUniformMatrix4fv(q_model_loc,1,GL_FALSE,model.data());
+        GLint q_q_model_loc = glGetUniformLocation(q_prog_id,"q_model");
+        glUniformMatrix4fv(q_q_model_loc,1,GL_FALSE,q_model.data());
+        GLint q_view_loc = glGetUniformLocation(q_prog_id,"view");
+        glUniformMatrix4fv(q_view_loc,1,GL_FALSE,view.data());
+        GLint q_light_view_loc = glGetUniformLocation(q_prog_id,"light_view");
+        glUniformMatrix4fv(q_light_view_loc,1,GL_FALSE,light_view.data());
+        
+        if(v == 0)
         {
-          // std::cout << "block " << "0, " << count*w*h <<", " << w*h << ", 1"
-          //           << " to " << j << ", " << "0, " << w*h << ", 1" << std::endl;
-          visibility_values.block(count*w*h, 0, w*h, 1) += visibility_slices.block(j, 0, w*h, 1);
-          j+=(w*h);
+          // first one
+          bind_map_for_writing(FBO_render_even);
+          GLint q_index_loc = glGetUniformLocation(q_prog_id,"index");
+          glUniform1i(q_index_loc, v);
+        }
+        else if(v % 2 == 0)
+        {
+          GLint q_vtexture_loc = glGetUniformLocation(q_prog_id,"visibility_map");
+          glUniform1i(q_vtexture_loc, 1);
+          bind_map_for_writing(FBO_render_even);
+          bind_map_for_reading(visibility_map_odd, GL_TEXTURE1);
+          GLint q_index_loc = glGetUniformLocation(q_prog_id,"index");
+          glUniform1i(q_index_loc, v);
+        }
+        else if(v % 2 != 0)
+        {
+          GLint q_vtexture_loc = glGetUniformLocation(q_prog_id,"visibility_map");
+          glUniform1i(q_vtexture_loc, 1);
+          bind_map_for_writing(FBO_render_odd);
+          bind_map_for_reading(visibility_map_even, GL_TEXTURE1);
+          GLint q_index_loc = glGetUniformLocation(q_prog_id,"index");
+          glUniform1i(q_index_loc, v);
         }
 
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         
-        // igl::writeDMAT("slices"+std::to_string(i)+".dmat", visibility_slices, true);
+        mesh_to_vao(q_prog_id, Q_V, Q_F, Q_N, Q_TC,Q_VAO);
+
+        igl::opengl::report_gl_error("bind frame buffer for color reading\n");
+        bind_map_for_reading(shadow_map, GL_TEXTURE0);
+
+        glBindVertexArray(Q_VAO);
+        
+        igl::opengl::report_gl_error("bind vao quad\n");
+        glDrawElements(GL_TRIANGLES, Q_F.size(), GL_UNSIGNED_INT, 0);
+        igl::opengl::report_gl_error("draw elements to offscreen buffer\n");
+        
+        // Eigen::Matrix< GLfloat,Eigen::Dynamic,Eigen::Dynamic,Eigen::RowMajor> visibility_slice;
+        //       visibility_slice.resize(w*h,1);
+        // glReadPixels(0, 0, w, h, GL_RED, GL_FLOAT, visibility_slice.data());
+        // igl::writeDMAT("slice"+std::to_string(v)+".dmat", visibility_slice, true);
+
+        // glFlush();
+        // glfwSwapBuffers(window);
+
+        glBindVertexArray(0);
+
+        ///////////
+
+        glFlush();
+        glfwSwapBuffers(window);
+        igl::opengl::report_gl_error("flush\n");
+
+        {
+          glfwPollEvents();
+          // In microseconds
+          double duration = 1000000.*(igl::get_seconds()-tic);
+          const double min_duration = 1000000./60.;
+          if(duration<min_duration)
+          {
+            std::this_thread::sleep_for(std::chrono::microseconds((int)(min_duration-duration)));
+          }
+        }
+        igl::opengl::report_gl_error("poll\n");
+        
       }
+
+      Eigen::Matrix< GLfloat,Eigen::Dynamic,Eigen::Dynamic,Eigen::RowMajor> visibility_slice;
+            visibility_slice.resize(w*h,1);
+
+
+      if (count >= max_slices_per_texture)
+      { 
+        which_texture++; 
+        tex_dims = t_dims[0] * (which_texture+1);
+        y_offset = 0;
+        count = 0;
+      }
+      
+      std::cout << "WHICH TEXTURE? " << which_texture << std::endl;
+      // std::cout << y_offset << std::endl;
+
+      bind_map_for_reading(large_visibilities[which_texture], GL_TEXTURE2);
+
+      glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, y_offset, 0, 0, w, h);
+      igl::opengl::report_gl_error("copy texture\n");
+
+      y_offset += h;
+
+
+      // glReadPixels(0, 0, w, h, GL_RED, GL_FLOAT, visibility_slice.data());
+      // igl::writeDMAT("slice"+std::to_string(count)+".dmat", visibility_slice, true);
+
+      // if(count < side(2))
+      // {
+      //       visibility_values.block(count*w*h, 0, w*h, 1) = visibility_slice;
+      // }
 
       z_slice += step;
       count++;
       
+    }
+    Eigen::Matrix< GLfloat,Eigen::Dynamic,Eigen::Dynamic,Eigen::RowMajor> visibility_slices;
+    visibility_slices.resize((number_of_slices+1)*w*h,1);
+    for(int i = 0; i < num_textures; i++)
+    {
+        bind_map_for_reading(large_visibilities[i],GL_TEXTURE2);
+
+        Eigen::Matrix< GLfloat,Eigen::Dynamic,Eigen::Dynamic,Eigen::RowMajor> visibility_slices;
+        visibility_slices.resize(max_slices_per_texture*w*h,1);
+
+        glGetTexImage(GL_TEXTURE_2D, 0, GL_RED, GL_FLOAT, visibility_slices.data());
+        igl::opengl::report_gl_error("get tex\n");
+        // glClearTexImage(large_visibilities[i], 0, GL_RED, GL_FLOAT, NULL);
+        // igl::opengl::report_gl_error("clear tex\n");
+
+        // std::cout << "BLOCK " << "0, " << i*max_slices_per_texture*w*h << ", " 
+        //           << max_slices_per_texture*w*h << ", 1" << 
+        //           " to 0, 0, " <<max_slices_per_texture*w*h << ", 1" << std::endl;
+
+        visibility_values.block(
+                  i*max_slices_per_texture*w*h, 0,
+                  max_slices_per_texture*w*h, 1)
+                  = visibility_slices.block(0,0,max_slices_per_texture*w*h, 1);
+        
+        igl::writeDMAT("slices"+std::to_string(i)+".dmat", visibility_slices, true);
     }
 
   std::cout << "size of vector: " << visibility_values.rows() << std::endl;
