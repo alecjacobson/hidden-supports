@@ -376,6 +376,26 @@ glfwSetCursorPosCallback(
 
   float fl_max_slices_per_texture = (number_of_slices) / num_textures;
   int max_slices_per_texture = std::floor(fl_max_slices_per_texture);
+
+  GLuint large_visibilities[num_textures];
+
+  if(num_textures > 1)
+  {
+    for(int i = 0; i < num_textures; i++)
+    {
+      init_shadow_buffer(large_visibilities[i], FBO_large, render_prog_id, 
+          w, h*max_slices_per_texture, "none");
+      std::cout << "SIZE " << w << " by " << h*max_slices_per_texture << std::endl;
+    }
+  }
+  else
+  {
+    init_shadow_buffer(large_visibilities[0], FBO_large, render_prog_id, 
+        w, h*(number_of_slices), "none");
+    igl::opengl::report_gl_error("init large shadow buffer\n");
+    std::cout << "SIZE " << w << " by " << h*(number_of_slices) << std::endl;
+  }
+
   
 
   float start_time = igl::get_seconds();
@@ -395,8 +415,6 @@ glfwSetCursorPosCallback(
 
   // Main display routine
   double tic = igl::get_seconds();
-  GLuint large_visibilities[num_textures];
-  
   while(z_slice < max_z)
   {
     std::cout << "Z SLICE NUMBER: " << count << std::endl;
@@ -477,23 +495,6 @@ glfwSetCursorPosCallback(
       }
     }
       igl::opengl::report_gl_error("loaded shaders\n");
-
-      if(num_textures > 1)
-      {
-        for(int i = 0; i < num_textures; i++)
-        {
-          init_shadow_buffer(large_visibilities[i], FBO_large, render_prog_id, 
-              w, h*max_slices_per_texture, "none");
-          std::cout << "SIZE " << w << " by " << h*max_slices_per_texture << std::endl;
-        }
-      }
-      else
-      {
-        init_shadow_buffer(large_visibilities[0], FBO_large, render_prog_id, 
-            w, h*(number_of_slices), "none");
-        igl::opengl::report_gl_error("init large shadow buffer\n");
-        std::cout << "SIZE " << w << " by " << h*(number_of_slices) << std::endl;
-      }
 
       for(int v = 0; v < views.rows(); v++)
       {
@@ -718,16 +719,7 @@ glfwSetCursorPosCallback(
       count++;
       copy_count++;
       
-      glDeleteFramebuffers(1,&FBO_large);
-      for(int i = 0; i < num_textures; i++)
-      {
-        glDeleteTextures(1,&large_visibilities[i]);
-      }
-
     }
-
-
-    glDeleteVertexArrays(1,&VAO);
 
     Eigen::Matrix< GLfloat,Eigen::Dynamic,Eigen::Dynamic,Eigen::RowMajor> visibility_slices;
     visibility_slices.resize((number_of_slices)*w*h,1);
@@ -755,59 +747,62 @@ glfwSetCursorPosCallback(
         // igl::writeDMAT("slices"+std::to_string(i)+".dmat", visibility_slices, true);
     }
 
-  std::cout << "size of vector: " << visibility_values.rows() << std::endl;
-  Eigen::VectorXf S(Eigen::Map<Eigen::VectorXf>(visibility_values.data(), 
-          visibility_values.cols()*visibility_values.rows()));      
-  // all invisible/geometry voxels have 1 or floats, visible voxels have 0
-  S /= num_views;
-  igl::writeDMAT("visibilities.dmat", S, true);
-  // std::cout << "filled voxels from main " << (S.array() == 1).count() << std::endl;
+    glDeleteVertexArrays(1,&VAO);
+    glDeleteFramebuffers(1,&FBO_large);
 
-  Eigen::MatrixXf V_voxels;
-  Eigen::MatrixXi F_voxels;
-  Eigen::MatrixXf V_voxels_mc;
-  Eigen::MatrixXi F_voxels_mc;
-  std::cout << side << std::endl;
+    std::cout << "size of vector: " << visibility_values.rows() << std::endl;
+    Eigen::VectorXf S(Eigen::Map<Eigen::VectorXf>(visibility_values.data(), 
+            visibility_values.cols()*visibility_values.rows()));      
+    // all invisible/geometry voxels have 1 or floats, visible voxels have 0
+    S /= num_views;
+    igl::writeDMAT("visibilities.dmat", S, true);
+    // std::cout << "filled voxels from main " << (S.array() == 1).count() << std::endl;
 
-  double isovalue = 1.0;
-  // voxelize
-  make_voxels_from_visibility(S, GV, side, isovalue, V_voxels, F_voxels);
-  std::cout << V_voxels.rows() << ", " << V_voxels.cols() << std::endl;
-  std::cout << F_voxels.rows() << ", " << F_voxels.cols() << std::endl;
-  // write obj
-  /////////
-  Eigen::Vector3f m = V.colwise().maxCoeff();
-  V *= scale_factor;
-  V.rowwise() += translation;
+    Eigen::MatrixXf V_voxels;
+    Eigen::MatrixXi F_voxels;
+    Eigen::MatrixXf V_voxels_mc;
+    Eigen::MatrixXi F_voxels_mc;
+    std::cout << side << std::endl;
 
-  V_voxels *= scale_factor;
-  V_voxels.rowwise() += translation;
+    double isovalue = 1.0;
+    // voxelize
+    make_voxels_from_visibility(S, GV, side, isovalue, V_voxels, F_voxels);
+    std::cout << V_voxels.rows() << ", " << V_voxels.cols() << std::endl;
+    std::cout << F_voxels.rows() << ", " << F_voxels.cols() << std::endl;
+    // write obj
+    /////////
+    Eigen::Vector3f m = V.colwise().maxCoeff();
+    V *= scale_factor;
+    V.rowwise() += translation;
 
-  GV *= scale_factor;
-  GV.rowwise() += translation;
-  /////////////////
-  Eigen::MatrixXf NV;
-  Eigen::MatrixXi NF;
-  Eigen::MatrixXi IM;
-  Eigen::MatrixXi MI;
-  igl::remove_duplicate_vertices(V_voxels, F_voxels, 1e-8, NV, IM, MI, NF);
+    V_voxels *= scale_factor;
+    V_voxels.rowwise() += translation;
 
-  igl::writeOBJ("output_voxels.obj", NV, NF);
-  // igl::writeOBJ("output_voxels.obj", V_voxels, F_voxels);
+    GV *= scale_factor;
+    GV.rowwise() += translation;
+    /////////////////
+    Eigen::MatrixXf NV;
+    Eigen::MatrixXi NF;
+    Eigen::MatrixXi IM;
+    Eigen::MatrixXi MI;
+    igl::remove_duplicate_vertices(V_voxels, F_voxels, 1e-8, NV, IM, MI, NF);
 
-  // Eigen::VectorXf sum = V_voxels.rowwise().sum();
-  // std::cout << (sum.array() == 0).count() << std::endl;
+    igl::writeOBJ("output_voxels.obj", NV, NF);
+    // igl::writeOBJ("output_voxels.obj", V_voxels, F_voxels);
 
-  // voxelize sanity check
-  // S = (S.array() != 0).select(-S, S);
-  // igl::copyleft::marching_cubes(S, GV, side(0), side(1), side(2), -1.0, V_voxels_mc, F_voxels_mc);
-  // igl::writeSTL("output_marching_cubes.stl", V_voxels_mc, F_voxels_mc);
+    // Eigen::VectorXf sum = V_voxels.rowwise().sum();
+    // std::cout << (sum.array() == 0).count() << std::endl;
 
-  std::cout << "views: " << std::endl;
-  for(int i = 0; i < views.rows(); i++)
-  {
-    std::cout << views.row(i) << std::endl;
-  }
+    // voxelize sanity check
+    // S = (S.array() != 0).select(-S, S);
+    // igl::copyleft::marching_cubes(S, GV, side(0), side(1), side(2), -1.0, V_voxels_mc, F_voxels_mc);
+    // igl::writeSTL("output_marching_cubes.stl", V_voxels_mc, F_voxels_mc);
+
+    std::cout << "views: " << std::endl;
+    for(int i = 0; i < views.rows(); i++)
+    {
+      std::cout << views.row(i) << std::endl;
+    }
 
   glfwDestroyWindow(window);
   glfwTerminate();
