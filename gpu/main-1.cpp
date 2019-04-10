@@ -211,7 +211,7 @@ int main(int argc, char * argv[])
   // perspective(-light_right, light_right, -light_top, light_top, near, far, proj);
 
   // get view rays
-  float num_views = 10000.0;
+  float num_views = 300.0;
   Eigen::Vector3f bottom_left = V.colwise().minCoeff();
 	Eigen::Vector3f top_right = V.colwise().maxCoeff();
 	Eigen::MatrixXf views;
@@ -232,120 +232,10 @@ int main(int argc, char * argv[])
       {
         glfwSetWindowShouldClose(window,true);
       }
-    });
-  glfwSetCharModsCallback(
-    window,
-    [](GLFWwindow* window, unsigned int codepoint, int modifier)
-    {
-      switch(codepoint)
-      {
-        case 'O':
-        case 'o':
-          // Q_V.col(2).array() += 0.1;
-          // mesh_to_vao(q_prog_id, Q_V, Q_F, Q_N, Q_TC, Q_VAO);
-          z_slice += step;
-          std::cout << "quad z " << z_slice << std::endl;
-          q_model << ratio, 0, 0, 0,
-                  0, 1, 0, 0,
-                  0, 0, 1, z_slice,
-                  0, 0, 0, 1;
-          break;
-        case 'P':
-        case 'p':
-          // Q_V.col(2).array() -= 0.1;
-          // mesh_to_vao(q_prog_id, Q_V, Q_F, Q_N, Q_TC, Q_VAO);
-          z_slice -= step;
-          std::cout << "quad z " << z_slice << std::endl;
-          q_model << ratio, 0, 0, 0,
-                  0, 1, 0, 0,
-                  0, 0, 1, z_slice,
-                  0, 0, 0, 1;
-          break;
-        case 'D':
-        case 'd':
-          view.matrix().block(0,0,3,3).setIdentity();
-          break;
-        case 'L':
-        case 'l':
-          wire_frame ^= 1;
-          std::cout << "wireframe = " << wire_frame << std::endl;
-          break;
-        case 'Z':
-        case 'z':
-          break;
-        case 'X':
-        case 'x':
-          break;
-        case 'A':
-        case 'a':
-          break;
-        case 'S':
-        case 's':
-          break;
-        case 'C':
-        case 'c':
-          break;
-        case 'V':
-        case 'v':
-          break;
-        default:
-          std::cout<<"Unrecognized key: "<<(unsigned char) codepoint<<std::endl;
-          break;
-      }
-    });
+  });
 
-glfwSetMouseButtonCallback(
-    window,
-    [](GLFWwindow * window, int button, int action, int mods)
-    {
-      mouse_down = action == GLFW_PRESS;
-    });
-glfwSetCursorPosCallback(
-  window,
-  [](GLFWwindow * window, double x, double y)
-  {
-    static double mouse_last_x = x;
-    static double mouse_last_y = y;
-    double dx = x-mouse_last_x;
-    double dy = y-mouse_last_y;
-    if(mouse_down)
-    {
-      // // Two axis valuator with fixed up
-      // float factor = std::abs(light_view.matrix()(2,3));
-      // light_view.rotate(
-      //   Eigen::AngleAxisf(
-      //     dx*factor/float(w),
-      //     Eigen::Vector3f(0,1,0)));
-      // light_view.rotate(
-      //   Eigen::AngleAxisf(
-      //     dy*factor/float(h),
-      //     light_view.matrix().topLeftCorner(3,3).inverse()*Eigen::Vector3f(1,0,0)));
-
-      // Two axis valuator with fixed up
-      // float factor = std::abs(view.matrix()(2,3));
-      // view.rotate(
-      //   Eigen::AngleAxisf(
-      //     dx*factor/float(w),
-      //     Eigen::Vector3f(0,1,0)));
-      // view.rotate(
-      //   Eigen::AngleAxisf(
-      //     dy*factor/float(h),
-      //     view.matrix().topLeftCorner(3,3).inverse()*Eigen::Vector3f(1,0,0)));
-    }
-    mouse_last_x = x;
-    mouse_last_y = y;
-    });
-  glfwSetScrollCallback(window,
-    [](GLFWwindow * window, double xoffset, double yoffset)
-    {
-      view.matrix()(2,3) =
-        std::min(std::max(view.matrix()(2,3)+(float)yoffset,-100.0f),-0.1f);
-      std::cout << "view: " << view.matrix()(2,3) << std::endl;
-      
-    });
 
   glEnable(GL_DEPTH_TEST);
-  igl::opengl::report_gl_error("enabled\n");
 
   // Force compilation on first iteration through loop
   double time_of_last_shader_compilation = 0;
@@ -396,7 +286,7 @@ glfwSetCursorPosCallback(
     std::cout << "SIZE " << w << " by " << h*(number_of_slices) << std::endl;
   }
 
-  
+  igl::opengl::report_gl_error("made large textures\n");
 
   float start_time = igl::get_seconds();
 
@@ -556,7 +446,7 @@ glfwSetCursorPosCallback(
         GLint p_view_loc = glGetUniformLocation(prog_id,"view");
         glUniformMatrix4fv(p_view_loc,1,GL_FALSE,view.data());
 
-        igl::opengl::report_gl_error("uniforms\n");
+        igl::opengl::report_gl_error("uniforms using prog_id\n");
 
         //////////
 
@@ -573,7 +463,7 @@ glfwSetCursorPosCallback(
 
         // draw elements to texture
         glDrawElements(GL_TRIANGLES, F.size(), GL_UNSIGNED_INT, 0);
-        igl::opengl::report_gl_error("draw elements 1\n");
+        igl::opengl::report_gl_error("draw elements to texture\n");
 
         // Eigen::Matrix< GLubyte,Eigen::Dynamic,Eigen::Dynamic,Eigen::RowMajor> shadow;
         // shadow.resize(t_w*t_h,1);
@@ -582,7 +472,7 @@ glfwSetCursorPosCallback(
         // igl::writeDMAT("texture"+std::to_string(v)+".dmat", shadow,true);
 
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        igl::opengl::report_gl_error("unbind fbo 0\n");
+        igl::opengl::report_gl_error("unbind fbo\n");
 
         glViewport(0, 0, w, h);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -613,6 +503,8 @@ glfwSetCursorPosCallback(
         glUniformMatrix4fv(q_view_loc,1,GL_FALSE,view.data());
         GLint q_light_view_loc = glGetUniformLocation(q_prog_id,"light_view");
         glUniformMatrix4fv(q_light_view_loc,1,GL_FALSE,light_view.data());
+
+        igl::opengl::report_gl_error("uniforms using q_prog_id\n");
         
         if(v == 0)
         {
@@ -639,17 +531,17 @@ glfwSetCursorPosCallback(
           GLint q_index_loc = glGetUniformLocation(q_prog_id,"index");
           glUniform1i(q_index_loc, v);
         }
+        igl::opengl::report_gl_error("binding maps for reading/writing\n");
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         
         mesh_to_vao(q_prog_id, Q_V, Q_F, Q_N, Q_TC,Q_VAO);
 
-        igl::opengl::report_gl_error("bind frame buffer for color reading\n");
         bind_map_for_reading(shadow_map, GL_TEXTURE0);
 
         glBindVertexArray(Q_VAO);
-        
         igl::opengl::report_gl_error("bind vao quad\n");
+
         glDrawElements(GL_TRIANGLES, Q_F.size(), GL_UNSIGNED_INT, 0);
         igl::opengl::report_gl_error("draw elements to offscreen buffer\n");
         
@@ -679,6 +571,8 @@ glfwSetCursorPosCallback(
       glDeleteFramebuffers(1,&FBO);
       glDeleteFramebuffers(1,&FBO_render_odd);
       glDeleteFramebuffers(1,&FBO_render_even);
+
+      igl::opengl::report_gl_error("delete\n");
 
       // end of view for loop
 
