@@ -650,7 +650,7 @@ int main(int argc, char * argv[])
     Eigen::VectorXf S(Eigen::Map<Eigen::VectorXf>(visibility_values.data(), 
             visibility_values.cols()*visibility_values.rows()));      
     // all invisible/geometry voxels have 1 or floats, visible voxels have 0
-    S /= num_views;
+    // S /= num_views;
     igl::writeDMAT("visibilities.dmat", S, true);
     // std::cout << "filled voxels from main " << (S.array() == 1).count() << std::endl;
 
