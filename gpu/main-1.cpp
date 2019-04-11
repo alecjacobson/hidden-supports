@@ -195,11 +195,11 @@ int main(int argc, char * argv[])
   // ratio = (float)w / (float)h;
   std::cout << "made voxel grid" << std::endl;
   std::cout << side << std::endl;
-  std::cout << ratio << std::endl;
+  // std::cout << ratio << std::endl;
 
   max_z = V.col(2).maxCoeff();
   min_z = V.col(2).minCoeff();
-  std::cout << max_z << std::endl << min_z << std::endl;
+  // std::cout << max_z << std::endl << min_z << std::endl;
   z_range = std::abs(max_z - min_z);
   int number_of_slices = side(2)+1;
   step = z_range / number_of_slices;
@@ -211,11 +211,13 @@ int main(int argc, char * argv[])
   // perspective(-light_right, light_right, -light_top, light_top, near, far, proj);
 
   // get view rays
-  float num_views = 10.0;
+  float num_views = 1.0;
   Eigen::Vector3f bottom_left = V.colwise().minCoeff();
 	Eigen::Vector3f top_right = V.colwise().maxCoeff();
 	Eigen::MatrixXf views;
-	generate_views(bottom_left, top_right, num_views, views);
+	// generate_views(bottom_left, top_right, num_views, views);
+  views.resize(1,3);
+  views.row(0) = Eigen::Vector3f(0,0,-1);
 	std::cout << "generated viewing rays" << std::endl;
 
   igl::readOBJ("../data/u-quad.obj", Q_V, Q_TC, Q_N, Q_F, Q_FTC, Q_FN);
@@ -290,9 +292,9 @@ int main(int argc, char * argv[])
 
   float start_time = igl::get_seconds();
 
-  // z_slice = min_z;
-  z_slice = min_z + (number_of_slices/2)*step;
-  max_z = z_slice + step;
+  z_slice = min_z;
+  // z_slice = min_z + (number_of_slices/2)*step;
+  // max_z = z_slice + step;
 
   int count = 0;
   int copy_count = 0;
@@ -546,7 +548,7 @@ int main(int argc, char * argv[])
         igl::opengl::report_gl_error("draw elements to offscreen buffer\n");
         
         // Eigen::Matrix< GLfloat,Eigen::Dynamic,Eigen::Dynamic,Eigen::RowMajor> visibility_slice;
-        //       visibility_slice.resize(w*h,1);
+        // visibility_slice.resize(w*h,1);
         // glReadPixels(0, 0, w, h, GL_RED, GL_FLOAT, visibility_slice.data());
         // igl::writeDMAT("slice"+std::to_string(v)+".dmat", visibility_slice, true);
 
@@ -557,36 +559,29 @@ int main(int argc, char * argv[])
 
         ///////////
 
-        glFlush();
+        // glFlush();
         glfwSwapBuffers(window);
-        igl::opengl::report_gl_error("flush\n");
+        // igl::opengl::report_gl_error("flush\n");
 
       
         
       }
-      glDeleteTextures(1,&shadow_map);
-      glDeleteTextures(1,&visibility_map_even);
-      glDeleteTextures(1,&visibility_map_odd);
-
-      glDeleteFramebuffers(1,&FBO);
-      glDeleteFramebuffers(1,&FBO_render_odd);
-      glDeleteFramebuffers(1,&FBO_render_even);
 
       igl::opengl::report_gl_error("delete\n");
 
       // end of view for loop
 
       Eigen::Matrix< GLfloat,Eigen::Dynamic,Eigen::Dynamic,Eigen::RowMajor> visibility_slice;
-            visibility_slice.resize(w*h,1);
+      visibility_slice.resize(w*h,1);
 
 
-      if (copy_count >= max_slices_per_texture)
-      { 
-        which_texture++; 
-        tex_dims = t_dims[0] * (which_texture+1);
-        y_offset = 0;
-        copy_count = 0;
-      }
+      // if (copy_count >= max_slices_per_texture)
+      // { 
+      //   which_texture++; 
+      //   tex_dims = t_dims[0] * (which_texture+1);
+      //   y_offset = 0;
+      //   copy_count = 0;
+      // }
       
       // std::cout << "WHICH TEXTURE? " << which_texture << std::endl;
       // // std::cout << y_offset << std::endl;
@@ -600,9 +595,9 @@ int main(int argc, char * argv[])
 
 
       glReadPixels(0, 0, w, h, GL_RED, GL_FLOAT, visibility_slice.data());
-      // igl::writeDMAT("slice"+std::to_string(count)+".dmat", visibility_slice, true);
+      igl::writeDMAT("slice"+std::to_string(count)+".dmat", visibility_slice, true);
 
-      if(count < side(2))
+      if(count <= side(2))
       {
         visibility_values.block(count*w*h, 0, w*h, 1) = visibility_slice;
       }
@@ -610,6 +605,14 @@ int main(int argc, char * argv[])
       z_slice += step;
       count++;
       copy_count++;
+
+      glDeleteTextures(1,&shadow_map);
+      glDeleteTextures(1,&visibility_map_even);
+      glDeleteTextures(1,&visibility_map_odd);
+
+      glDeleteFramebuffers(1,&FBO);
+      glDeleteFramebuffers(1,&FBO_render_odd);
+      glDeleteFramebuffers(1,&FBO_render_even);
       
     }
 
