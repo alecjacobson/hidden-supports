@@ -211,13 +211,14 @@ int main(int argc, char * argv[])
   // perspective(-light_right, light_right, -light_top, light_top, near, far, proj);
 
   // get view rays
-  float num_views = 1.0;
+  float num_views = 2.0;
   Eigen::Vector3f bottom_left = V.colwise().minCoeff();
 	Eigen::Vector3f top_right = V.colwise().maxCoeff();
 	Eigen::MatrixXf views;
 	// generate_views(bottom_left, top_right, num_views, views);
-  views.resize(1,3);
+  views.resize(2,3);
   views.row(0) = Eigen::Vector3f(0,0,-1);
+  views.row(1) = Eigen::Vector3f(-0.1,0,-1);
 	std::cout << "generated viewing rays" << std::endl;
 
   igl::readOBJ("../data/u-quad.obj", Q_V, Q_TC, Q_N, Q_F, Q_FTC, Q_FN);
