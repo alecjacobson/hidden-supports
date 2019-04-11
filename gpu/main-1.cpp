@@ -39,8 +39,8 @@
 #include "generate_views.h"
 
 // int w=512,h=301;
-int w=100,h=100;
-int d=100;
+int w=200,h=140;
+int d=200;
 int t_w,t_h;
 float ratio = 0.0;
 
@@ -276,14 +276,14 @@ int main(int argc, char * argv[])
   {
     for(int i = 0; i < num_textures; i++)
     {
-      init_shadow_buffer(large_visibilities[i], FBO_large, 2, 
+      init_shadow_buffer(large_visibilities[i], FBO_large, GL_TEXTURE2, 
           w, h*max_slices_per_texture, "none");
       std::cout << "SIZE " << w << " by " << h*max_slices_per_texture << std::endl;
     }
   }
   else
   {
-    init_shadow_buffer(large_visibilities[0], FBO_large, 2, 
+    init_shadow_buffer(large_visibilities[0], FBO_large, GL_TEXTURE2, 
         w, h*(number_of_slices), "none");
     igl::opengl::report_gl_error("init large shadow buffer\n");
     std::cout << "SIZE " << w << " by " << h*(number_of_slices) << std::endl;
@@ -395,13 +395,13 @@ int main(int argc, char * argv[])
     }
       igl::opengl::report_gl_error("loaded shaders\n");
 
-      init_shadow_buffer(shadow_map, FBO, 0, t_w, t_h, "depth");
+      init_shadow_buffer(shadow_map, FBO, GL_TEXTURE0, t_w, t_h, "depth");
       igl::opengl::report_gl_error("init shadow buffer\n");
 
-      init_shadow_buffer(visibility_map_odd, FBO_render_odd, 1, w, h, "color");
+      init_shadow_buffer(visibility_map_odd, FBO_render_odd, GL_TEXTURE1, w, h, "color");
       igl::opengl::report_gl_error("init shadow buffer\n");
 
-      init_shadow_buffer(visibility_map_even, FBO_render_even, 1, w, h, "color");
+      init_shadow_buffer(visibility_map_even, FBO_render_even, GL_TEXTURE1, w, h, "color");
       igl::opengl::report_gl_error("init shadow buffer\n");
 
       for(int v = 0; v < views.rows(); v++)

@@ -7,7 +7,7 @@
 inline void init_shadow_buffer(
   GLuint & shadow_map,
   GLuint & fbo,
-  const GLuint & id,
+  const GLenum unit,
   const int & width,
   const int & height,
   const std::string type);
@@ -24,7 +24,7 @@ inline void bind_map_for_writing(
 inline void init_shadow_buffer(
   GLuint & shadow_map,
   GLuint & fbo,
-  const GLuint & id,
+  const GLenum unit,
   const int & width,
   const int & height,
   const std::string type)
@@ -33,7 +33,7 @@ inline void init_shadow_buffer(
 
     // Create the depth buffer
     glGenTextures(1, &shadow_map);
-    glActiveTexture(id);
+    glActiveTexture(unit);
     glBindTexture(GL_TEXTURE_2D, shadow_map);
     if(type == "depth")
       glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, width, height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
