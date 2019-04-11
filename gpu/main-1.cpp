@@ -211,7 +211,7 @@ int main(int argc, char * argv[])
   // perspective(-light_right, light_right, -light_top, light_top, near, far, proj);
 
   // get view rays
-  float num_views = 20.0;
+  float num_views = 30.0;
   Eigen::Vector3f bottom_left = V.colwise().minCoeff();
 	Eigen::Vector3f top_right = V.colwise().maxCoeff();
 	Eigen::MatrixXf views;
@@ -276,14 +276,14 @@ int main(int argc, char * argv[])
   {
     for(int i = 0; i < num_textures; i++)
     {
-      init_shadow_buffer(large_visibilities[i], FBO_large, render_prog_id, 
+      init_shadow_buffer(large_visibilities[i], FBO_large, 2, 
           w, h*max_slices_per_texture, "none");
       std::cout << "SIZE " << w << " by " << h*max_slices_per_texture << std::endl;
     }
   }
   else
   {
-    init_shadow_buffer(large_visibilities[0], FBO_large, render_prog_id, 
+    init_shadow_buffer(large_visibilities[0], FBO_large, 2, 
         w, h*(number_of_slices), "none");
     igl::opengl::report_gl_error("init large shadow buffer\n");
     std::cout << "SIZE " << w << " by " << h*(number_of_slices) << std::endl;
@@ -395,13 +395,13 @@ int main(int argc, char * argv[])
     }
       igl::opengl::report_gl_error("loaded shaders\n");
 
-      init_shadow_buffer(shadow_map, FBO, q_prog_id, t_w, t_h, "depth");
+      init_shadow_buffer(shadow_map, FBO, 0, t_w, t_h, "depth");
       igl::opengl::report_gl_error("init shadow buffer\n");
 
-      init_shadow_buffer(visibility_map_odd, FBO_render_odd, q_prog_id, w, h, "color");
+      init_shadow_buffer(visibility_map_odd, FBO_render_odd, 1, w, h, "color");
       igl::opengl::report_gl_error("init shadow buffer\n");
 
-      init_shadow_buffer(visibility_map_even, FBO_render_even, q_prog_id, w, h, "color");
+      init_shadow_buffer(visibility_map_even, FBO_render_even, 1, w, h, "color");
       igl::opengl::report_gl_error("init shadow buffer\n");
 
       for(int v = 0; v < views.rows(); v++)
@@ -587,6 +587,8 @@ int main(int argc, char * argv[])
       std::cout << "WHICH TEXTURE? " << which_texture << std::endl;
       // std::cout << y_offset << std::endl;
 
+      GLint tex_id;
+      glGetIntegerv(GL_TEXTURE_BINDING_2D, &tex_id);
       bind_map_for_reading(large_visibilities[which_texture], GL_TEXTURE2);
       glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, y_offset, 0, 0, w, h);
       // std::cout << "copy texture tic " << tic << std::endl;
@@ -658,12 +660,12 @@ int main(int argc, char * argv[])
     Eigen::MatrixXi F_voxels_mc;
     std::cout << side << std::endl;
 
+    Eigen::MatrixXf V_voxels;
+    Eigen::MatrixXi F_voxels;
     for(int isovalue = 1; isovalue <= num_views; isovalue++)
     {
       std::cout << "isovalue " << isovalue << std::endl;
       // voxelize
-      Eigen::MatrixXf V_voxels;
-      Eigen::MatrixXi F_voxels;
       make_voxels_from_visibility(S, GV, side, (double)isovalue, V_voxels, F_voxels);
       // write obj
       /////////

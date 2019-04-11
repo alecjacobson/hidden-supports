@@ -79,7 +79,7 @@ inline void	make_voxels_from_visibility(
 	Eigen::VectorXf S_iso = (S.array() >= isovalue).select(isovalue, S.array()-S.array());
 	int filled_count = (S_iso.array() == isovalue).count();
 
-	// igl::writeDMAT("visibility_isovalue_"+std::to_string(isovalue)+".dmat", S_iso, false);
+	igl::writeDMAT("visibility_isovalue_"+std::to_string(isovalue)+".dmat", S_iso, false);
 
 	float voxel_dims = std::abs(GV.row(0)(0) - GV.row(1)(0));
 	//std::cout << voxel_dims << std::endl;
@@ -90,8 +90,6 @@ inline void	make_voxels_from_visibility(
 
 	int current_filled_v = 0;
 	int current_filled_f = 0;
-
-	std::cout << "makin cubes" << std::endl;
 
 	for(int index = 0; index < GV.rows(); index ++)
 	{
@@ -177,12 +175,11 @@ inline void	make_voxels_from_visibility(
 				// if this voxel is filled, put a cube there
 				if(S_iso.row(index).value() == isovalue)
 				{
-					// std::cout << index << std::endl;
 					make_cube();
 
 				}
 	}
-	std::cout << "num of CUBES made " << count << std::endl;
+	std::cout << "number of voxels made " << count << std::endl;
 }
 
 inline void	make_hex_from_visibility(
@@ -201,7 +198,7 @@ inline void	make_hex_from_visibility(
 	std::cout << side(0) << " * " << side(1) << " * " << side(2) << " = " << side(0)*side(1)*side(2)<< std::endl;
 
 	Eigen::VectorXf S_iso = (S.array() >= isovalue).select(1, S.array()-S.array());
-	int filled_count = (S_iso.array() == isovalue).count();
+	int filled_count = (S_iso.array() == 1).count();
 
 	// igl::writeDMAT("visibility_isovalue_"+std::to_string(isovalue)+".dmat", S_iso, false);
 

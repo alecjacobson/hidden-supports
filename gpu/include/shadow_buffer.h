@@ -33,6 +33,7 @@ inline void init_shadow_buffer(
 
     // Create the depth buffer
     glGenTextures(1, &shadow_map);
+    glActiveTexture(id);
     glBindTexture(GL_TEXTURE_2D, shadow_map);
     if(type == "depth")
       glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, width, height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
