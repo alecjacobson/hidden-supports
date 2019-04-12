@@ -211,7 +211,7 @@ int main(int argc, char * argv[])
   // perspective(-light_right, light_right, -light_top, light_top, near, far, proj);
 
   // get view rays
-  float num_views = 30.0;
+  float num_views = 40.0;
   Eigen::Vector3f bottom_left = V.colwise().minCoeff();
 	Eigen::Vector3f top_right = V.colwise().maxCoeff();
 	Eigen::MatrixXf views;
