@@ -22,8 +22,8 @@ void generate_views(
 	double mean_x = (bottom_left(0) + top_right(0)) / 2;
 	double mean_y = (bottom_left(1) + top_right(1)) / 2;
 
-	double std_dev_x = std::abs(bottom_left(0) - top_right(0)) / 6;
-	double std_dev_y = std::abs(bottom_left(1) - top_right(1)) / 6;
+	double std_dev_x = std::abs(bottom_left(0) - top_right(0)) / 5;
+	double std_dev_y = std::abs(bottom_left(1) - top_right(1)) / 5;
 
 	std::default_random_engine generator;
 	std::normal_distribution<double> distribution_x(mean_x, std_dev_x);

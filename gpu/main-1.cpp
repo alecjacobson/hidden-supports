@@ -39,7 +39,7 @@
 #include "generate_views.h"
 
 // int w=512,h=301;
-int w=200,h=140;
+int w=200,h=139;
 int d=200;
 int t_w,t_h;
 float ratio = 0.0;
@@ -82,7 +82,7 @@ float near = 0.1;
 // float near = 1.0;
 float far = 1000;
 float z_slice = 0.0;
-float light_top = tan((60./2.)*M_PI/180.)*near;
+float light_top = tan((40./2.)*M_PI/180.)*near;
 float top = 0.5;
 float light_right = light_top * (double)::w/(double)::h;
 float right = top * (double)::w/(double)::h;
@@ -587,12 +587,13 @@ int main(int argc, char * argv[])
       std::cout << "WHICH TEXTURE? " << which_texture << std::endl;
       // std::cout << y_offset << std::endl;
 
-      GLint tex_id;
-      glGetIntegerv(GL_TEXTURE_BINDING_2D, &tex_id);
-      bind_map_for_reading(large_visibilities[which_texture], GL_TEXTURE2);
-      glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, y_offset, 0, 0, w, h);
-      // std::cout << "copy texture tic " << tic << std::endl;
-      igl::opengl::report_gl_error("copy texture\n");
+      if(count <= side(2))
+      {
+        bind_map_for_reading(large_visibilities[which_texture], GL_TEXTURE2);
+        glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, y_offset, 0, 0, w, h);
+        // std::cout << "copy texture tic " << tic << std::endl;
+        igl::opengl::report_gl_error("copy texture\n");
+      }
 
       y_offset += h;
 
@@ -660,33 +661,31 @@ int main(int argc, char * argv[])
     Eigen::MatrixXi F_voxels_mc;
     std::cout << side << std::endl;
 
-    Eigen::MatrixXf V_voxels;
-    Eigen::MatrixXi F_voxels;
-    for(int isovalue = 1; isovalue <= num_views; isovalue++)
+    for(int isovalue = 3; isovalue <= num_views; isovalue++)
     {
       std::cout << "isovalue " << isovalue << std::endl;
+      Eigen::VectorXf S_iso = (S.array() >= isovalue).select(1, S.array()-S.array());
+      // int filled_count = (S_iso.array() == isovalue).count();
+
+      igl::writeDMAT("visibility_isovalue_"+std::to_string(isovalue)+".dmat", S_iso, false);
       // voxelize
-      make_voxels_from_visibility(S, GV, side, (double)isovalue, V_voxels, F_voxels);
-      // write obj
-      /////////
-      // Eigen::Vector3f m = V.colwise().maxCoeff();
-      // V *= scale_factor;
-      // V.rowwise() += translation;
-
-      // V_voxels *= scale_factor;
-      // V_voxels.rowwise() += translation;
-
-      // GV *= scale_factor;
-      // GV.rowwise() += translation;
-      /////////////////
+      // Eigen::MatrixXf V_voxels;
+      // Eigen::MatrixXi F_voxels;
+      // V_voxels.resize(0,0);
+      // F_voxels.resize(0,0);
+      // make_voxels_from_visibility(S, GV, side, (double)isovalue, V_voxels, F_voxels);
+      // // write obj
+      // /////////////////
       // Eigen::MatrixXf NV;
       // Eigen::MatrixXi NF;
       // Eigen::MatrixXi IM;
       // Eigen::MatrixXi MI;
       // igl::remove_duplicate_vertices(V_voxels, F_voxels, 1e-8, NV, IM, MI, NF);
 
-      // igl::writeOBJ("output_voxels_"+std::to_string(isovalue)+".obj", NV, NF);
-      igl::writeOBJ("output_voxels_"+std::to_string(isovalue)+".obj", V_voxels, F_voxels);
+      // std::stringstream ss;
+      // ss << std::setfill('0') << std::setw(3) << isovalue;
+      // igl::writeOBJ("output_voxels_"+ss.str()+".obj", NV, NF);
+      // igl::writeOBJ("output_voxels_"+ss.str()+".obj", V_voxels, F_voxels);
 
     }
 

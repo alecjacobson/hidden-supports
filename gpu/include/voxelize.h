@@ -76,13 +76,13 @@ inline void	make_voxels_from_visibility(
     int depth = side(2);
 	// std::cout << side(0) << " * " << side(1) << " * " << side(2) << " = " << side(0)*side(1)*side(2)<< std::endl;
 
-	Eigen::VectorXf S_iso = (S.array() >= isovalue).select(isovalue, S.array()-S.array());
+	Eigen::VectorXf S_iso = (S.array() >= isovalue).select(1, S.array()-S.array());
 	int filled_count = (S_iso.array() == isovalue).count();
 
 	igl::writeDMAT("visibility_isovalue_"+std::to_string(isovalue)+".dmat", S_iso, false);
 
 	float voxel_dims = std::abs(GV.row(0)(0) - GV.row(1)(0));
-	//std::cout << voxel_dims << std::endl;
+	std::cout << voxel_dims << std::endl;
 
 	// V_voxels.resize(GV.rows(),3);
 	V_voxels.resize(filled_count*8,3); 
@@ -173,7 +173,7 @@ inline void	make_voxels_from_visibility(
 					return 0;
 				};
 				// if this voxel is filled, put a cube there
-				if(S_iso.row(index).value() == isovalue)
+				if(S_iso.row(index).value() == 1)
 				{
 					make_cube();
 
