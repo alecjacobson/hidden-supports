@@ -185,11 +185,7 @@ int main(int argc, char * argv[])
   Eigen::Matrix<int,Eigen::Dynamic,3,Eigen::RowMajor>  F_int = F.cast <int> ();
   std::cout << "casted to int" << std::endl;
   surround_scene_in_grid(d, V, F_int, side, GV);
-  for(int i = 0; i < GV.rows(); i++)
-  {
-    std::cout << GV.row(i) <<std::endl;
-  }
-  exit(0);
+
   w = side(0);
   h = side(1);
   d = side(2);
