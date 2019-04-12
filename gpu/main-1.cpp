@@ -661,7 +661,7 @@ int main(int argc, char * argv[])
     Eigen::MatrixXi F_voxels_mc;
     std::cout << side << std::endl;
 
-    for(int isovalue = 3; isovalue <= num_views; isovalue++)
+    for(int isovalue = 1; isovalue <= num_views; isovalue++)
     {
       std::cout << "isovalue " << isovalue << std::endl;
       Eigen::VectorXf S_iso = (S.array() >= isovalue).select(1, S.array()-S.array());

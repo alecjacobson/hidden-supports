@@ -164,3 +164,5 @@ inline void	make_voxels_from_visibility(
 	}
 	std::cout << "number of voxels made " << count << std::endl;
 }
+
+#endif
