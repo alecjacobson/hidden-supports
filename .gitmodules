@@ -19,3 +19,6 @@
 [submodule "DGtal"]
 	path = DGtal
 	url = https://github.com/DGtal-team/DGtal
+[submodule "imguizmo"]
+	path = imguizmo
+	url = https://github.com/alecjacobson/ImGuizmo
