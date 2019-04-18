@@ -1,22 +1,16 @@
 [submodule "libigl"]
 	path = libigl
 	url = https://github.com/libigl/libigl
-[submodule "TopOpt_in_PETSc"]
-	path = TopOpt_in_PETSc
-	url = https://github.com/topopt/TopOpt_in_PETSc
 [submodule "glfw"]
 	path = glfw
 	url = https://github.com/glfw/glfw.git
-[submodule "eigen-git-mirror"]
+[submodule "eigen"]
 	path = eigen-git-mirror
 	url = https://github.com/eigenteam/eigen-git-mirror
-[submodule "connected-components-3d"]
-	path = connected-components-3d
-	url = https://github.com/seung-lab/connected-components-3d
 [submodule "GAUSS"]
 	path = GAUSS
 	url = https://github.com/dilevin/GAUSS
-[submodule "DGtal"]
+[submodule "dgtal"]
 	path = DGtal
 	url = https://github.com/DGtal-team/DGtal
 [submodule "imguizmo"]
