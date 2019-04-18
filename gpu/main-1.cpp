@@ -38,10 +38,11 @@
 #include "look_at.h"
 #include "voxelize.h"
 #include "generate_views.h"
+#include "write_pgm.h"
 
 // int w=512,h=301;
-int w=300,h=153;
-int d=300;
+int w=100,h=90;
+int d=100;
 int t_w,t_h;
 float ratio = 0.0;
 
@@ -210,15 +211,24 @@ int main(int argc, char * argv[])
   orthographic(-right, right, -top, top, near, far, proj);
 
   // get view rays
-  float num_views = 200.0;
-  Eigen::Vector3f bottom_left = V.colwise().minCoeff();
-	Eigen::Vector3f top_right = V.colwise().maxCoeff();
-	Eigen::MatrixXf views;
-	generate_views(bottom_left, top_right, num_views, views);
+  float num_views = 500.0;
+  // Eigen::Vector3f bottom_left = V.colwise().minCoeff();
+  Eigen::Vector3f bottom_left(-0.5,0,-1);  
+  // Eigen::Vector3f top_right = V.colwise().maxCoeff();
+  Eigen::Vector3f top_right(0.5,0.4,-1);
+  Eigen::MatrixXf views;
+  std::vector<float> z_vals{-1, 1};
+  generate_views(bottom_left, top_right, num_views, z_vals, views);
   // views.resize(2,3);
-  // views.row(0) = Eigen::Vector3f(0,0,-1);
-  // views.row(1) = Eigen::Vector3f(-0.1,0,-1);
+  // views.row(0) = Eigen::Vector3f(0,0.4,-1);
+  // views.row(1) = Eigen::Vector3f(0,0.4,1);
 	std::cout << "generated viewing rays" << std::endl;
+  std::cout << "views: " << std::endl;
+  for(int i = 0; i < views.rows(); i++)
+  {
+    std::cout << views.row(i) << std::endl;
+  }
+  igl::writeDMAT("../results/views.dmat", views, true);
 
   igl::readOBJ("../data/u-quad.obj", Q_V, Q_TC, Q_N, Q_F, Q_FTC, Q_FN);
   Q_V.rowwise() -= Q_V.colwise().mean();
@@ -282,8 +292,10 @@ int main(int argc, char * argv[])
     t_start += diff;
     return diff;
   };
+      Eigen::MatrixXf V_voxels;
+      Eigen::MatrixXi F_voxels;
 
-  while(z_slice < max_z)
+  while(z_slice < max_z-step)
   {
     std::cout << "Z SLICE NUMBER: " << count << std::endl;
     std::cout << "Z SLICE DEPTH: " << z_slice << std::endl;
@@ -376,7 +388,7 @@ int main(int argc, char * argv[])
       {
         
 
-        std::cout << "view tic " << v << " " << tictoc() << std::endl;
+        // std::cout << "view tic " << v << " " << tictoc() << std::endl;
 
         Eigen::Vector3f viewpoint = views.row(v);
         Eigen::Vector3f l = centroid - viewpoint;
@@ -568,13 +580,13 @@ int main(int argc, char * argv[])
     Eigen::MatrixXi vv = visibility_values.cast <int> ();
     Eigen::VectorXi S(Eigen::Map<Eigen::VectorXi>(vv.data(), vv.cols()*vv.rows()));      
 
-    // igl::writeDMAT("visibilities.dmat", S, true);
+    igl::writeDMAT("../results/visibilities.dmat", S, true);
 
     Eigen::MatrixXf V_voxels_mc;
     Eigen::MatrixXi F_voxels_mc;
     std::cout << side << std::endl;
 
-    for(int isovalue = 1; isovalue <= num_views; isovalue+=10)
+    for(int isovalue = 1; isovalue <= views.rows(); isovalue+=10)
     {
       std::cout << "isovalue " << isovalue << std::endl;
       std::stringstream ss;
@@ -584,41 +596,33 @@ int main(int argc, char * argv[])
       // igl::writeDMAT("visibility_isovalue_"+std::to_string(isovalue)+".dmat", S_iso, false);
 
       // voxelize
-      Eigen::MatrixXf V_voxels;
-      Eigen::MatrixXi F_voxels;
       Eigen::MatrixXf V_hex;
       Eigen::MatrixXi F_hex;
       Eigen::MatrixXf V_quad;
       Eigen::MatrixXi F_quad;
       Eigen::MatrixXi I_quad;
 
-      // make_voxels_from_visibility(S, GV, side, (double)isovalue, V_voxels, F_voxels);
-      make_hex_from_visibility(S, GV, side, isovalue, V_hex, F_hex);
+      make_voxels_from_visibility(S, GV, side, (double)isovalue, V_voxels, F_voxels);
 
-      igl::writeDMAT("V_hex_"+ss.str()+".dmat", V_hex, true);
-      igl::writeDMAT("F_hex_"+ss.str()+".dmat", F_hex, true);
+      // make_hex_from_visibility(S, GV, side, isovalue, V_hex, F_hex);
+
+      // igl::writeDMAT("V_hex_"+ss.str()+".dmat", V_hex, true);
+      // igl::writeDMAT("F_hex_"+ss.str()+".dmat", F_hex, true);
       
       // extract_voxel_surface(V_hex, F_hex, V_quad, F_quad, I_quad);
-      // for(int i = 0;i < F_quad.rows(); i++)
-      // {
-      //   std::cout << F_quad.row(i) << std::endl;
-      // }
+     
+      Eigen::VectorXi S_iso = (S.array() >= isovalue).select(isovalue, S.array()-S.array());
+      igl::writeDMAT("../results/visibility_isovalue_"+std::to_string(isovalue)+".dmat", S_iso, false);
 
-      igl::writeOBJ("output_voxels_"+ss.str()+".obj", V_hex, F_hex);
+      // igl::writeOBJ("../results/output_voxels_"+ss.str()+".obj", V_hex, F_hex);
       // igl::writeOBJ("output_voxels_"+ss.str()+".obj", V_quad, F_quad);
+      write_pgm("output_vol_"+ss.str()+".pgm3d", S,side,isovalue);
 
-    }
-
-    std::cout << "views: " << std::endl;
-    for(int i = 0; i < views.rows(); i++)
-    {
-      std::cout << views.row(i) << std::endl;
     }
 
   glfwDestroyWindow(window);
   glfwTerminate();
 
-  /*
   // transform back meshes
   Eigen::Vector3f m = V.colwise().maxCoeff();
   V *= scale_factor;
@@ -633,7 +637,7 @@ int main(int argc, char * argv[])
 
   views *= scale_factor;
   views.rowwise() += translation;
-  views.rowwise() += Eigen::RowVector3f(0,0,-translation(2)+scale_factor);
+  // views.rowwise() += Eigen::RowVector3f(0,0,-translation(2)+scale_factor);
 
   // Create a libigl Viewer object
   igl::opengl::glfw::Viewer viewer;
@@ -648,9 +652,9 @@ int main(int argc, char * argv[])
   // viewer.data().set_points(GV.cast <double>(), Eigen::RowVector3d(0.0,0.0,0.0));
   // viewer.data().point_size = 10;
 
-  // viewer.data().set_points(views.cast <double>(), Eigen::RowVector3d(0.0,0.0,0.0));
+  viewer.data().set_points(views.cast <double>(), Eigen::RowVector3d(0.0,0.0,0.0));
+  viewer.data().point_size = 10;
   viewer.launch();
-  */  
 
   return EXIT_SUCCESS;
 

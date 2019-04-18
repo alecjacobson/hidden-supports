@@ -190,16 +190,6 @@ inline void	make_voxels_from_visibility(
 
 				}
 	}
-
-	std::cout << "how many voxels 'should have been' made " <<  filled_count << std::endl;
-	std::cout << "number of voxels made " << count << std::endl;
-	std::cout << "do filled count and voxels made match? " << (count == filled_count) << std::endl;
-	if(count != filled_count)
-	{
-		int cubes_to_remove = filled_count - count;
-		int rows_to_remove = cubes_to_remove * 6;
-		F_voxels.conservativeResize(F_voxels.rows()-rows_to_remove,3);
-	}
 }
 
 inline void	make_hex_from_visibility(
