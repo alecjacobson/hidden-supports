@@ -17,6 +17,7 @@
 void generate_views( 
 	const Eigen::Vector3f &top_left,
 	const Eigen::Vector3f &bottom_right,
-	const int num_views,
+	const float num_views,
+	const std::vector<float> z_vals,
 	Eigen::MatrixXf &views);
 #endif

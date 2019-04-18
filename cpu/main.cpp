@@ -11,7 +11,7 @@
 
 int main(int argc, char *argv[])
 {
-	float num_views = 5;
+	float num_views = 100;
 
 	//for (int i = 0; i < views.rows(); i++)
 	//	std::cout << i << ": " << views.row(i) << std::endl;
@@ -27,7 +27,7 @@ int main(int argc, char *argv[])
 		std::stringstream ss;
 		ss << std::setw(2) << std::setfill('0') << frame;
 		std::string n = ss.str();
-		std::string filename = argc > 1 ? argv[1] : "/Users/sak/Documents/parachute.stl";
+		std::string filename = argc > 1 ? argv[1] : "/Users/sak/Documents/hidden-supports/gpu/data/spider-no-floor.stl";
 		if(argc > 1)
 			filename = filename + "-" + n + ".stl";
 		std::cout << "filename " << filename << std::endl;
@@ -50,13 +50,14 @@ int main(int argc, char *argv[])
 		float min_y = min_v(1);
 
 		// compute "area light" of possible views
+		std::vector<float> z_vals{9.5, -9.5};
 		Eigen::Vector3f top_left(-8.5, 7.5, 9.5);
 		//Eigen::Vector3d bottom_right(-1.0, 2.0, 5.0);
 		Eigen::Vector3f bottom_right(0.5, 0.0, 9.5);
 
 		// get view rays
 		Eigen::MatrixXf views;
-		generate_views(top_left, bottom_right, num_views, views);
+		generate_views(top_left, bottom_right, num_views, z_vals, views);
 		std::cout << "generated viewing rays" << std::endl;
 
 		// compute shadow volume
