@@ -65,7 +65,7 @@ inline void surround_scene_in_grid(
 
 	Eigen::AlignedBox<float, 3> box(V.colwise().minCoeff(), V.colwise().maxCoeff());
 
-	igl::voxel_grid(box, length, 1, GV, side);
+	igl::voxel_grid(box, length, 3, GV, side);
 
 	// int lowest = std::min(std::min(side(0),side(1)),side(2));
 	// igl::voxel_grid(box, length, 2*(length-lowest)-1, GV, side);

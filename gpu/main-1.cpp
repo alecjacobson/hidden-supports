@@ -41,8 +41,8 @@
 #include "write_pgm.h"
 
 // int w=512,h=301;
-int w=100,h=90;
-int d=100;
+int w=300,h=147;
+int d=300;
 int t_w,t_h;
 float ratio = 0.0;
 
@@ -211,13 +211,13 @@ int main(int argc, char * argv[])
   orthographic(-right, right, -top, top, near, far, proj);
 
   // get view rays
-  float num_views = 500.0;
+  float num_views = 300.0;
   // Eigen::Vector3f bottom_left = V.colwise().minCoeff();
   Eigen::Vector3f bottom_left(-0.5,0,-1);  
   // Eigen::Vector3f top_right = V.colwise().maxCoeff();
   Eigen::Vector3f top_right(0.5,0.4,-1);
   Eigen::MatrixXf views;
-  std::vector<float> z_vals{-1, 1};
+  std::vector<float> z_vals{-1.5, -0.7, -1, -1.3};
   generate_views(bottom_left, top_right, num_views, z_vals, views);
   // views.resize(2,3);
   // views.row(0) = Eigen::Vector3f(0,0.4,-1);
@@ -295,7 +295,7 @@ int main(int argc, char * argv[])
       Eigen::MatrixXf V_voxels;
       Eigen::MatrixXi F_voxels;
 
-  while(z_slice < max_z-step)
+  while(z_slice < max_z)//-step)
   {
     std::cout << "Z SLICE NUMBER: " << count << std::endl;
     std::cout << "Z SLICE DEPTH: " << z_slice << std::endl;
@@ -592,17 +592,14 @@ int main(int argc, char * argv[])
       std::stringstream ss;
       ss << std::setfill('0') << std::setw(3) << isovalue;
 
-      // Eigen::VectorXf S_iso = (S.array() >= isovalue).select(1, S.array()-S.array());
-      // igl::writeDMAT("visibility_isovalue_"+std::to_string(isovalue)+".dmat", S_iso, false);
-
       // voxelize
-      Eigen::MatrixXf V_hex;
-      Eigen::MatrixXi F_hex;
-      Eigen::MatrixXf V_quad;
-      Eigen::MatrixXi F_quad;
-      Eigen::MatrixXi I_quad;
+      // Eigen::MatrixXf V_hex;
+      // Eigen::MatrixXi F_hex;
+      // Eigen::MatrixXf V_quad;
+      // Eigen::MatrixXi F_quad;
+      // Eigen::MatrixXi I_quad;
 
-      make_voxels_from_visibility(S, GV, side, (double)isovalue, V_voxels, F_voxels);
+      // make_voxels_from_visibility(S, GV, side, (double)isovalue, V_voxels, F_voxels);
 
       // make_hex_from_visibility(S, GV, side, isovalue, V_hex, F_hex);
 
@@ -616,45 +613,45 @@ int main(int argc, char * argv[])
 
       // igl::writeOBJ("../results/output_voxels_"+ss.str()+".obj", V_hex, F_hex);
       // igl::writeOBJ("output_voxels_"+ss.str()+".obj", V_quad, F_quad);
-      write_pgm("output_vol_"+ss.str()+".pgm3d", S,side,isovalue);
+      // write_pgm("output_vol_"+ss.str()+".pgm3d", S,side,isovalue);
 
     }
 
   glfwDestroyWindow(window);
   glfwTerminate();
 
-  // transform back meshes
-  Eigen::Vector3f m = V.colwise().maxCoeff();
-  V *= scale_factor;
-  V.rowwise() += translation;
+  // // transform back meshes
+  // Eigen::Vector3f m = V.colwise().maxCoeff();
+  // V *= scale_factor;
+  // V.rowwise() += translation;
 
-  // std::cout << (V.colwise().maxCoeff()-V.colwise().minCoeff()).maxCoeff() << std::endl;
-  V_voxels *= scale_factor;
-  V_voxels.rowwise() += translation;
+  // // std::cout << (V.colwise().maxCoeff()-V.colwise().minCoeff()).maxCoeff() << std::endl;
+  // V_voxels *= scale_factor;
+  // V_voxels.rowwise() += translation;
 
-  GV *= scale_factor;
-  GV.rowwise() += translation;
+  // GV *= scale_factor;
+  // GV.rowwise() += translation;
 
-  views *= scale_factor;
-  views.rowwise() += translation;
-  // views.rowwise() += Eigen::RowVector3f(0,0,-translation(2)+scale_factor);
+  // views *= scale_factor;
+  // views.rowwise() += translation;
+  // // views.rowwise() += Eigen::RowVector3f(0,0,-translation(2)+scale_factor);
 
-  // Create a libigl Viewer object
-  igl::opengl::glfw::Viewer viewer;
-  viewer.data().set_mesh(V_voxels.cast <double> (), F_voxels);
-  viewer.data().set_face_based(true);
-  viewer.data().set_colors(Eigen::RowVector3d(146,197,222)/255.);
-  // viewer.append_mesh();
-  // viewer.data().set_mesh(V.cast <double> (), F_int);
+  // // Create a libigl Viewer object
+  // igl::opengl::glfw::Viewer viewer;
+  // viewer.data().set_mesh(V_voxels.cast <double> (), F_voxels);
   // viewer.data().set_face_based(true);
-  // viewer.data().set_colors(Eigen::RowVector3d(244,165,130)/255.);
+  // viewer.data().set_colors(Eigen::RowVector3d(146,197,222)/255.);
+  // // viewer.append_mesh();
+  // // viewer.data().set_mesh(V.cast <double> (), F_int);
+  // // viewer.data().set_face_based(true);
+  // // viewer.data().set_colors(Eigen::RowVector3d(244,165,130)/255.);
 
-  // viewer.data().set_points(GV.cast <double>(), Eigen::RowVector3d(0.0,0.0,0.0));
+  // // viewer.data().set_points(GV.cast <double>(), Eigen::RowVector3d(0.0,0.0,0.0));
+  // // viewer.data().point_size = 10;
+
+  // viewer.data().set_points(views.cast <double>(), Eigen::RowVector3d(0.0,0.0,0.0));
   // viewer.data().point_size = 10;
-
-  viewer.data().set_points(views.cast <double>(), Eigen::RowVector3d(0.0,0.0,0.0));
-  viewer.data().point_size = 10;
-  viewer.launch();
+  // viewer.launch();
 
   return EXIT_SUCCESS;
 
