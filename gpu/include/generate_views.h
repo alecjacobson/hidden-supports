@@ -8,14 +8,14 @@
 #include <random>
 #include <igl/sortrows.h>
 
-void generate_views(
+void generate_views_on_plane(
 	const Eigen::Vector3f &bottom_left,
 	const Eigen::Vector3f &top_right,
 	const float num_views,
 	const std::vector<float> z_vals,
 	Eigen::MatrixXf &views);
 
-void generate_views(
+void generate_views_on_plane(
 	const Eigen::Vector3f &bottom_left,
 	const Eigen::Vector3f &top_right,
 	const float num_views,
