@@ -8,5 +8,5 @@
 
 `make`
 
-`./shaderpipeline ../data/shaders.json ../data/quad_shaders.json ../data/render.json ../data/<filename>`
+`./shaderpipeline ../data/<filename> <number_of_views>`
 
