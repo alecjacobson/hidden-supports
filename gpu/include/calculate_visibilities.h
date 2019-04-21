@@ -219,6 +219,93 @@ inline int calculate_visibilities(
     return diff;
   };
 
+  mesh_to_vao(prog_id, sc.V, sc.F, sc.N, sc.TC, VAO);
+  igl::opengl::report_gl_error("create vao 1\n");
+  mesh_to_vao(q_prog_id, Q_V, Q_F, Q_N, Q_TC,Q_VAO);
+  igl::opengl::report_gl_error("create vao 2\n");
+
+  if(any_changed(paths,time_of_last_json_load))
+  {
+    std::cout<<"-----------------------------------------------"<<std::endl;
+    time_of_last_json_load = igl::get_seconds();
+    if(!read_json(paths[0],
+          vertex_shader_paths,
+          fragment_shader_paths))
+    {
+      std::cerr<<"Failed to read "<<paths[0]<<std::endl;
+    }
+    if(!read_json(paths[1],
+          q_vertex_shader_paths,
+          q_fragment_shader_paths))
+    {
+      std::cerr<<"Failed to read "<<paths[1]<<std::endl;
+    }
+    if(!read_json(paths[2],
+          render_vertex_shader_paths,
+          render_fragment_shader_paths))
+    {
+      std::cerr<<"Failed to read "<<paths[2]<<std::endl;
+    }
+    // force reload of shaders
+    time_of_last_shader_compilation = 0;
+  }
+  if(
+    any_changed(vertex_shader_paths         ,time_of_last_shader_compilation) ||
+    any_changed(fragment_shader_paths       ,time_of_last_shader_compilation) ||
+    any_changed(q_vertex_shader_paths         ,time_of_last_shader_compilation)||
+    any_changed(q_fragment_shader_paths       ,time_of_last_shader_compilation)||
+    any_changed(render_vertex_shader_paths    ,time_of_last_shader_compilation)||
+    any_changed(render_fragment_shader_paths  ,time_of_last_shader_compilation)) 
+  {
+    std::cout<<"-----------------------------------------------"<<std::endl;
+    // remember the time we tried to compile
+    time_of_last_shader_compilation = igl::get_seconds();
+    if(
+        !create_shader_program_from_files(
+          vertex_shader_paths,
+          fragment_shader_paths,
+          prog_id))
+    {
+      // Force null shader to visually indicate failure
+      glDeleteProgram(prog_id);
+      prog_id = 0;
+      std::cout<<"-----------------------------------------------"<<std::endl;
+    }
+    if(
+        !create_shader_program_from_files(
+          q_vertex_shader_paths,
+          q_fragment_shader_paths,
+          q_prog_id))
+    {
+      // Force null shader to visually indicate failure
+      glDeleteProgram(q_prog_id);
+      q_prog_id = 0;
+      std::cout<<"-----------------------------------------------"<<std::endl;
+    }
+    if(
+        !create_shader_program_from_files(
+          render_vertex_shader_paths,
+          render_fragment_shader_paths,
+          render_prog_id))
+    {
+      // Force null shader to visually indicate failure
+      glDeleteProgram(render_prog_id);
+      render_prog_id = 0;
+      std::cout<<"-----------------------------------------------"<<std::endl;
+    }
+  }
+  igl::opengl::report_gl_error("loaded shaders\n");
+
+    Eigen::Matrix< GLfloat,Eigen::Dynamic,Eigen::Dynamic,Eigen::RowMajor> visibility_slice;
+    visibility_slice.resize(w*h,1);
+
+    init_shadow_buffer(shadow_map, FBO, GL_TEXTURE0, t_w, t_h, "depth");
+    igl::opengl::report_gl_error("init shadow buffer\n");
+    init_shadow_buffer(visibility_map_odd, FBO_render_odd, GL_TEXTURE1, w, h, "color");
+    igl::opengl::report_gl_error("init shadow buffer\n");
+    init_shadow_buffer(visibility_map_even, FBO_render_even, GL_TEXTURE1, w, h, "color");
+    igl::opengl::report_gl_error("init shadow buffer\n");
+
   while(z_slice < max_z-step)
   {
     std::cout << "Z SLICE NUMBER: " << count << std::endl;
@@ -226,87 +313,6 @@ inline int calculate_visibilities(
     std::cout << "-----" << std::endl;
 
 
-
-    if(any_changed(paths,time_of_last_json_load))
-    {
-      std::cout<<"-----------------------------------------------"<<std::endl;
-      time_of_last_json_load = igl::get_seconds();
-      if(!read_json(paths[0],
-            vertex_shader_paths,
-            fragment_shader_paths))
-      {
-        std::cerr<<"Failed to read "<<paths[0]<<std::endl;
-      }
-      if(!read_json(paths[1],
-            q_vertex_shader_paths,
-            q_fragment_shader_paths))
-      {
-        std::cerr<<"Failed to read "<<paths[1]<<std::endl;
-      }
-      if(!read_json(paths[2],
-            render_vertex_shader_paths,
-            render_fragment_shader_paths))
-      {
-        std::cerr<<"Failed to read "<<paths[2]<<std::endl;
-      }
-      // force reload of shaders
-      time_of_last_shader_compilation = 0;
-    }
-    if(
-      any_changed(vertex_shader_paths         ,time_of_last_shader_compilation) ||
-      any_changed(fragment_shader_paths       ,time_of_last_shader_compilation) ||
-      any_changed(q_vertex_shader_paths         ,time_of_last_shader_compilation)||
-      any_changed(q_fragment_shader_paths       ,time_of_last_shader_compilation)||
-      any_changed(render_vertex_shader_paths    ,time_of_last_shader_compilation)||
-      any_changed(render_fragment_shader_paths  ,time_of_last_shader_compilation)) 
-    {
-      std::cout<<"-----------------------------------------------"<<std::endl;
-      // remember the time we tried to compile
-      time_of_last_shader_compilation = igl::get_seconds();
-      if(
-          !create_shader_program_from_files(
-            vertex_shader_paths,
-            fragment_shader_paths,
-            prog_id))
-      {
-        // Force null shader to visually indicate failure
-        glDeleteProgram(prog_id);
-        prog_id = 0;
-        std::cout<<"-----------------------------------------------"<<std::endl;
-      }
-      if(
-          !create_shader_program_from_files(
-            q_vertex_shader_paths,
-            q_fragment_shader_paths,
-            q_prog_id))
-      {
-        // Force null shader to visually indicate failure
-        glDeleteProgram(q_prog_id);
-        q_prog_id = 0;
-        std::cout<<"-----------------------------------------------"<<std::endl;
-      }
-      if(
-          !create_shader_program_from_files(
-            render_vertex_shader_paths,
-            render_fragment_shader_paths,
-            render_prog_id))
-      {
-        // Force null shader to visually indicate failure
-        glDeleteProgram(render_prog_id);
-        render_prog_id = 0;
-        std::cout<<"-----------------------------------------------"<<std::endl;
-      }
-    }
-    igl::opengl::report_gl_error("loaded shaders\n");
-
-    init_shadow_buffer(shadow_map, FBO, GL_TEXTURE0, t_w, t_h, "depth");
-    igl::opengl::report_gl_error("init shadow buffer\n");
-
-    init_shadow_buffer(visibility_map_odd, FBO_render_odd, GL_TEXTURE1, w, h, "color");
-    igl::opengl::report_gl_error("init shadow buffer\n");
-
-    init_shadow_buffer(visibility_map_even, FBO_render_even, GL_TEXTURE1, w, h, "color");
-    igl::opengl::report_gl_error("init shadow buffer\n");
 
     for(int v = 0; v < views.rows(); v++)
     {
@@ -337,10 +343,9 @@ inline int calculate_visibilities(
 
       glClear(GL_DEPTH_BUFFER_BIT);
 
-      mesh_to_vao(prog_id, sc.V, sc.F, sc.N, sc.TC, VAO);
-      igl::opengl::report_gl_error("bind vao 1\n");
       
       glBindVertexArray(VAO);
+      igl::opengl::report_gl_error("bind vao 1\n");
 
       glViewport(0, 0, t_w, t_h);
 
@@ -418,7 +423,6 @@ inline int calculate_visibilities(
 
       glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
       
-      mesh_to_vao(q_prog_id, Q_V, Q_F, Q_N, Q_TC,Q_VAO);
 
       bind_map_for_reading(shadow_map, GL_TEXTURE0);
 
@@ -436,7 +440,7 @@ inline int calculate_visibilities(
       glBindVertexArray(0);
 
       ///////////
-      glfwSwapBuffers(window);
+      //glfwSwapBuffers(window);
       
     }
 
@@ -444,8 +448,6 @@ inline int calculate_visibilities(
 
     // end of view for loop
 
-    Eigen::Matrix< GLfloat,Eigen::Dynamic,Eigen::Dynamic,Eigen::RowMajor> visibility_slice;
-    visibility_slice.resize(w*h,1);
 
     glReadPixels(0, 0, w, h, GL_RED, GL_FLOAT, visibility_slice.data());
     // igl::writeDMAT("slice"+std::to_string(count)+".dmat", visibility_slice, true);
@@ -458,15 +460,13 @@ inline int calculate_visibilities(
     z_slice += step;
     count++;
 
+  }
     glDeleteTextures(1,&shadow_map);
     glDeleteTextures(1,&visibility_map_even);
     glDeleteTextures(1,&visibility_map_odd);
-
     glDeleteFramebuffers(1,&FBO);
     glDeleteFramebuffers(1,&FBO_render_odd);
     glDeleteFramebuffers(1,&FBO_render_even);
-    
-  }
 
 
   std::cout << "size of matrix: " << visibility_values.rows() << std::endl;
